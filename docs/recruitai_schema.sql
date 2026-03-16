@@ -259,7 +259,7 @@ CREATE TABLE candidate_profiles (
   headline              TEXT,                 -- e.g. "Full-Stack Developer | 3 YOE"
   summary               TEXT,
   raw_cv_text           TEXT,                 -- raw extracted text
-  cv_file_url           TEXT,                 -- Supabase Storage URL
+  cv_file_url           TEXT,                 -- S3 URL (or file storage URL)
   cv_file_name          TEXT,
   cv_parsed_at          TIMESTAMPTZ,
   parse_version         INT DEFAULT 1,        -- parser model version
@@ -635,7 +635,7 @@ CREATE TABLE system_design_responses (
   assessment_id         UUID NOT NULL REFERENCES system_design_assessments(id) ON DELETE CASCADE,
   problem_id            UUID NOT NULL REFERENCES system_design_problems(id),
   -- Candidate's response (voice, text, or both)
-  audio_url             TEXT,                    -- Supabase Storage
+  audio_url             TEXT,                    -- S3 URL (or file storage URL)
   transcript            TEXT,
   diagram_url           TEXT,                    -- drawn diagram upload
   written_response      TEXT,
