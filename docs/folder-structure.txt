@@ -1,0 +1,77 @@
+recruitai/
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy-eks.yml                  # Pushes to Docker Hub, applies to EKS
+│
+├── schemas/
+│   ├── run-code.v1.json
+│   ├── evaluate.v1.json
+│   └── cv-parsed.v1.json
+│
+├── services/
+│   │
+│   ├── nextjs-web/                         # Core Web & API Gateway
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   ├── src/
+│   │   │   ├── pages/
+│   │   │   │   ├── index.tsx
+│   │   │   │   ├── dashboard.tsx
+│   │   │   │   └── interview/
+│   │   │   │       └── [id].tsx            # Vapi client initialized here
+│   │   │   ├── pages/api/
+│   │   │   │   ├── v1/
+│   │   │   │   │   ├── submissions/        # Triggered when code is written
+│   │   │   │   │   ├── intake/
+│   │   │   │   │   │   └── google-form.ts  # Webhook for Google Apps Script
+│   │   │   │   │   └── webhooks/
+│   │   │   │   │       ├── judge0.ts       # Receives code execution results
+│   │   │   │   │       └── vapi.ts         # Receives call-end & transcript data
+│   │   │   ├── lib/
+│   │   │   │   ├── supabase.ts
+│   │   │   │   ├── redis.ts
+│   │   │   │   ├── bull.ts
+│   │   │   │   └── s3.ts                   # AWS S3 client for CV uploads
+│   │   │   └── components/
+│   │   │       ├── VapiInterviewRoom/      # Dedicated Vapi UI component
+│   │   │       └── CodeEditor/
+│   │
+│   ├── executor-worker/                    # Code execution queue
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── jobs/runCode.ts             # Pushes code to Judge0 API
+│   │       └── services/judge0.ts
+│   │
+│   ├── evaluator-worker/                   # Heavy AI reasoning queue
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── jobs/evaluateDesign.ts      # LLM grading for system design
+│   │       └── services/llm.ts
+│   │
+│   └── cv-parser-worker/                   # CV ingestion queue
+│       ├── Dockerfile
+│       ├── package.json
+│       └── src/
+│           ├── jobs/parseCV.ts             # Pulls PDF from S3
+│           └── services/geminiParser.ts    # Extracts structured CV data
+│
+├── infra/
+│   └── kubernetes/
+│       ├── deployments/
+│       │   ├── nextjs-web.yaml             # Points to Docker Hub image
+│       │   ├── executor-worker.yaml        # Points to Docker Hub image
+│       │   ├── evaluator-worker.yaml       # Points to Docker Hub image
+│       │   └── cv-parser-worker.yaml       # Points to Docker Hub image
+│       ├── secrets/
+│       │   └── regcred.yaml                # Docker Hub authentication
+│       ├── services/
+│       │   └── web-service.yaml
+│       └── ingress/
+│           └── ingress.yaml
+│
+├── docker-compose.yml
+└── README.md
