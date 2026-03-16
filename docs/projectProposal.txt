@@ -1,0 +1,35 @@
+Group members:
+L23-0757 Bilal Kashif
+L23-0829 Muhammad Saad Zafar
+L23-0848 Mohammad Hamza Iqbal
+L23-0998 Muhammad Qatada
+1. RecruitAI
+Short Summary
+This project proposes an automated recruitment and candidate evaluation system that
+streamlines the hiring process using artificial intelligence. It conducts voice-based interviews,
+coding assessments, and system design evaluations to assess candidates’ technical and
+communication skills. The system also performs CV parsing to extract relevant candidate
+information and applies automated scoring to rank applicants objectively. By reducing manual
+screening efforts and bias, the platform improves efficiency, consistency, and accuracy in
+candidate selection.
+Features:
+1. Voice-Based Interviews
+The system conducts automated voice-based interviews where candidates respond to
+predefined or dynamically generated questions. Speech recognition and natural language
+processing are used to analyze responses for relevance, clarity, and communication skills.
+2. Coding Assessment Round
+The platform includes a coding round that evaluates candidates’ programming skills through
+problem-solving tasks. Submissions are automatically compiled, executed, and assessed based
+on correctness, efficiency, and coding standards.
+3. System Design Evaluation
+Candidates are assessed on system design concepts through structured questions or
+scenario-based problems. The system evaluates their understanding of scalability, architecture,
+and design principles relevant to real-world applications.
+4. CV Parsing and Information Extraction
+The system automatically parses candidate resumes to extract relevant information such as
+skills, education, experience, and projects. This reduces manual screening effort and enables
+structured candidate profiling.
+5. Automated Candidate Scoring and Ranking
+Based on interview performance, coding results, system design evaluation, and resume
+analysis, the system assigns an overall score to each candidate. Candidates are then ranked
+objectively to assist recruiters in efficient and unbiased decision-making.
