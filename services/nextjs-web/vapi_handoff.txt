@@ -1,0 +1,38 @@
+RecruitAI – Vapi AI Persona Handoff
+====================================
+Done by: Muhammad Qatada (L23-0998)
+Task:    AI Persona Setup (Sprint 1)
+
+WHAT WAS DONE
+-------------
+- Created a Vapi Assistant on dashboard.vapi.ai
+- Selected the LLM model for the assistant
+- Wrote a strict technical interviewer system prompt covering:
+    * 4 structured questions (intro, DSA, system design, behavioral)
+    * No small talk, no feedback, no hints
+    * Auto-terminates after the 4th answer
+
+ASSISTANT ID
+------------
+a04bbf68-fa17-408a-a75f-5195e3d6a131
+
+HOW TO USE IT (Bilal)
+----------------------
+1. In services/nextjs-web/.env.local, add:
+
+       NEXT_PUBLIC_VAPI_ASSISTANT_ID=a04bbf68-fa17-408a-a75f-5195e3d6a131
+
+2. In the VapiInterviewRoom component, start the call with:
+
+       vapi.start(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID)
+
+3. That's it. The assistant will handle the full interview flow automatically.
+
+NOTE: The Vapi API Key is NOT needed for the frontend SDK call.
+The Assistant ID alone is sufficient to dial the bot.
+
+ALSO DONE
+---------
+- Added NEXT_PUBLIC_VAPI_ASSISTANT_ID to services/nextjs-web/.env.example
+- Pushed changes on branch: feat/qatada-vapi-persona
+- PR opened against main
