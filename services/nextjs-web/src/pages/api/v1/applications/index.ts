@@ -41,17 +41,38 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
+  console.info('[API /api/v1/applications] Incoming request', {
+    method: req.method,
+    hasBody: Boolean(req.body),
+  })
+
   // Only allow POST requests
   if (req.method !== 'POST') {
+    console.warn('[API /api/v1/applications] Invalid method', {
+      method: req.method,
+    })
     return res.status(405).json({
       success: false,
       error: 'Method not allowed. Use POST.',
     })
   }
 
+  if (!supabaseAdmin) {
+    console.error('[API /api/v1/applications] Missing SUPABASE_SERVICE_ROLE_KEY')
+    return res.status(500).json({
+      success: false,
+      error: 'Server is not configured with SUPABASE_SERVICE_ROLE_KEY',
+    })
+  }
+
   try {
     // Validate request body
     const body = req.body as ApplicationData
+    console.info('[API /api/v1/applications] Validating body', {
+      bodyKeys: Object.keys((body || {}) as Record<string, unknown>),
+      job_id: body?.job_id,
+      email: body?.email,
+    })
     const validatedData = ApplicationSchema.parse(body)
 
     // 1. Check if job exists and is published
@@ -62,6 +83,10 @@ export default async function handler(
       .single()
 
     if (jobError || !job) {
+      console.warn('[API /api/v1/applications] Job not found', {
+        job_id: validatedData.job_id,
+        jobError,
+      })
       return res.status(404).json({
         success: false,
         error: 'Job posting not found',
@@ -69,6 +94,10 @@ export default async function handler(
     }
 
     if (job.status !== 'published') {
+      console.warn('[API /api/v1/applications] Job not published', {
+        job_id: validatedData.job_id,
+        status: job.status,
+      })
       return res.status(400).json({
         success: false,
         error: 'This job posting is not accepting applications',
@@ -97,6 +126,10 @@ export default async function handler(
         .single()
 
       if (existingApplication) {
+        console.warn('[API /api/v1/applications] Duplicate application blocked', {
+          job_id: validatedData.job_id,
+          applicant_id: profileId,
+        })
         return res.status(409).json({
           success: false,
           error: 'You have already applied to this job',
@@ -114,6 +147,7 @@ export default async function handler(
       })
 
       if (authError || !authUser.user) {
+        console.error('[API /api/v1/applications] Failed to create auth user', authError)
         return res.status(500).json({
           success: false,
           error: 'Failed to create user account',
@@ -139,6 +173,7 @@ export default async function handler(
         })
 
       if (profileError) {
+        console.error('[API /api/v1/applications] Failed to create profile', profileError)
         return res.status(500).json({
           success: false,
           error: 'Failed to create applicant profile',
@@ -161,6 +196,7 @@ export default async function handler(
       .single()
 
     if (applicationError || !application) {
+      console.error('[API /api/v1/applications] Failed to create application', applicationError)
       return res.status(500).json({
         success: false,
         error: 'Failed to create application',
@@ -170,17 +206,21 @@ export default async function handler(
 
     // 6. Create candidate profile (CV data placeholder)
     if (validatedData.cv_file_url) {
-      await supabaseAdmin
+      const { error: candidateProfileError } = await supabaseAdmin
         .from('candidate_profiles')
         .insert({
           applicant_id: profileId,
           cv_file_url: validatedData.cv_file_url,
           cv_file_name: validatedData.cv_file_name || null,
         })
+
+      if (candidateProfileError) {
+        console.error('[API /api/v1/applications] Failed to save candidate profile CV data', candidateProfileError)
+      }
     }
 
     // 7. Log status change
-    await supabaseAdmin
+    const { error: statusLogError } = await supabaseAdmin
       .from('application_status_log')
       .insert({
         application_id: application.id,
@@ -188,14 +228,25 @@ export default async function handler(
         reason: 'Application submitted via API',
       })
 
+    if (statusLogError) {
+      console.error('[API /api/v1/applications] Failed to write status log', statusLogError)
+    }
+
     // 8. Update job application count (optional, ignore errors)
     try {
       await supabaseAdmin.rpc('increment_application_count', {
         job_id: validatedData.job_id,
       })
-    } catch {
+    } catch (rpcError) {
+      console.warn('[API /api/v1/applications] increment_application_count RPC failed', rpcError)
       // Ignore if RPC doesn't exist
     }
+
+    console.info('[API /api/v1/applications] Application created', {
+      application_id: application.id,
+      applicant_id: profileId,
+      job_id: validatedData.job_id,
+    })
 
     return res.status(201).json({
       success: true,
@@ -208,6 +259,9 @@ export default async function handler(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.warn('[API /api/v1/applications] Validation error', {
+        issues: error.errors,
+      })
       return res.status(400).json({
         success: false,
         error: 'Validation error',

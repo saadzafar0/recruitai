@@ -17,6 +17,18 @@ import {
 } from '@/components/mock-interview'
 import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 
+function shouldDisplayInterviewError(error: string | null): boolean {
+  if (!error) return false
+
+  const normalized = error.toLowerCase()
+  return !(
+    normalized.includes('meeting has ended') ||
+    normalized.includes('meeting ended') ||
+    normalized.includes('due to ejection') ||
+    normalized.includes('ejection')
+  )
+}
+
 export default function MockInterviewPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
@@ -68,6 +80,7 @@ export default function MockInterviewPage() {
 
   // Determine the role of the current partial transcript
   const currentRole = isListening ? 'user' : (isSpeaking ? 'assistant' : undefined)
+  const showError = shouldDisplayInterviewError(error)
 
   return (
     <div className="min-h-screen flex flex-col bg-theme-bg transition-colors">
@@ -94,7 +107,7 @@ export default function MockInterviewPage() {
       {/* Desktop Layout */}
       <div className="hidden sm:flex flex-1 flex-col items-center justify-center px-6 py-8 gap-8">
         {/* Error message */}
-        {error && (
+        {showError && (
           <div className="w-full max-w-md flex items-start gap-3 px-4 py-3 rounded-lg border border-accent-red/30 bg-accent-red/10">
             <AlertCircle size={18} className="text-accent-red flex-shrink-0 mt-0.5" />
             <div>
@@ -153,7 +166,7 @@ export default function MockInterviewPage() {
       {/* Mobile Layout */}
       <div className="flex sm:hidden flex-1 flex-col px-4 py-6 gap-6">
         {/* Error message */}
-        {error && (
+        {showError && (
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-accent-red/30 bg-accent-red/10">
             <AlertCircle size={16} className="text-accent-red flex-shrink-0 mt-0.5" />
             <p className="text-xs text-accent-red/80">{error}</p>

@@ -7,6 +7,41 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { getVapiClient, getAssistantId, VapiCallStatus, VapiTranscriptMessage } from '@/lib/vapi'
 import type Vapi from '@vapi-ai/web'
 
+function getErrorText(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'string') return err
+
+  if (err && typeof err === 'object') {
+    const maybeMessage = Reflect.get(err, 'message')
+    if (typeof maybeMessage === 'string' && maybeMessage.trim().length > 0) {
+      return maybeMessage
+    }
+
+    const maybeError = Reflect.get(err, 'error')
+    if (typeof maybeError === 'string' && maybeError.trim().length > 0) {
+      return maybeError
+    }
+
+    try {
+      return JSON.stringify(err)
+    } catch {
+      return 'An error occurred'
+    }
+  }
+
+  return 'An error occurred'
+}
+
+function isExpectedEndError(message: string): boolean {
+  const normalizedMessage = message.toLowerCase()
+  return (
+    normalizedMessage.includes('meeting has ended') ||
+    normalizedMessage.includes('meeting ended') ||
+    normalizedMessage.includes('due to ejection') ||
+    normalizedMessage.includes('ejection')
+  )
+}
+
 export interface TranscriptEntry {
   id: string
   role: 'assistant' | 'user'
@@ -41,6 +76,17 @@ export function useVapi(): UseVapiReturn {
 
   const vapiRef = useRef<Vapi | null>(null)
   const transcriptIdCounter = useRef(0)
+  const statusRef = useRef<VapiCallStatus>('idle')
+  const sessionEndedRef = useRef(false)
+
+  const setStatusSafe = useCallback((nextStatus: VapiCallStatus) => {
+    statusRef.current = nextStatus
+    setStatus(nextStatus)
+  }, [])
+
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
 
   // Initialize VAPI and setup event listeners
   useEffect(() => {
@@ -49,13 +95,15 @@ export function useVapi(): UseVapiReturn {
 
     // Call started
     const handleCallStart = () => {
-      setStatus('connected')
+      sessionEndedRef.current = false
+      setStatusSafe('connected')
       setError(null)
     }
 
     // Call ended
     const handleCallEnd = () => {
-      setStatus('ended')
+      sessionEndedRef.current = true
+      setStatusSafe('ended')
       setIsSpeaking(false)
       setIsListening(false)
       setCurrentTranscript('')
@@ -63,26 +111,33 @@ export function useVapi(): UseVapiReturn {
 
     // Speech start (assistant speaking)
     const handleSpeechStart = () => {
+      if (sessionEndedRef.current) return
       setIsSpeaking(true)
       setIsListening(false)
-      setStatus('speaking')
+      setStatusSafe('speaking')
     }
 
     // Speech end (assistant stopped speaking)
     const handleSpeechEnd = () => {
       setIsSpeaking(false)
-      setStatus('connected')
+
+      const currentStatus = statusRef.current
+      if (currentStatus === 'connecting' || currentStatus === 'connected' || currentStatus === 'speaking' || currentStatus === 'listening') {
+        setStatusSafe('connected')
+      }
     }
 
     // Handle messages (transcripts, etc.)
     const handleMessage = (message: unknown) => {
+      if (sessionEndedRef.current) return
+
       const msg = message as VapiTranscriptMessage
       if (msg.type === 'transcript') {
         if (msg.transcriptType === 'partial') {
           setCurrentTranscript(msg.transcript)
           if (msg.role === 'user') {
             setIsListening(true)
-            setStatus('listening')
+            setStatusSafe('listening')
           }
         } else if (msg.transcriptType === 'final') {
           // Add to transcripts list
@@ -109,9 +164,30 @@ export function useVapi(): UseVapiReturn {
 
     // Error handling
     const handleError = (err: unknown) => {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      const errorMessage = getErrorText(err)
+
+      if (sessionEndedRef.current) {
+        return
+      }
+
+      const isExpectedCallEnd = isExpectedEndError(errorMessage)
+
+      if (isExpectedCallEnd) {
+        sessionEndedRef.current = true
+        setStatusSafe('ended')
+        setIsSpeaking(false)
+        setIsListening(false)
+        setCurrentTranscript('')
+        setError(null)
+        return
+      }
+
+      if (statusRef.current === 'ended' || statusRef.current === 'idle') {
+        return
+      }
+
       setError(errorMessage)
-      setStatus('error')
+      setStatusSafe('error')
     }
 
     // Register event listeners
@@ -133,7 +209,7 @@ export function useVapi(): UseVapiReturn {
       vapi.off('volume-level', handleVolumeLevel)
       vapi.off('error', handleError)
     }
-  }, [])
+  }, [setStatusSafe])
 
   // Start a call with the configured assistant
   const startCall = useCallback(async () => {
@@ -150,7 +226,8 @@ export function useVapi(): UseVapiReturn {
     }
 
     try {
-      setStatus('connecting')
+      sessionEndedRef.current = false
+      setStatusSafe('connecting')
       setError(null)
       setTranscripts([])
       setCurrentTranscript('')
@@ -158,18 +235,25 @@ export function useVapi(): UseVapiReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start call'
       setError(errorMessage)
-      setStatus('error')
+      setStatusSafe('error')
     }
-  }, [])
+  }, [setStatusSafe])
 
   // End the current call
   const endCall = useCallback(() => {
+    sessionEndedRef.current = true
+    setStatusSafe('ended')
+
     const vapi = vapiRef.current
     if (vapi) {
       vapi.stop()
-      setStatus('ended')
     }
-  }, [])
+
+    setIsSpeaking(false)
+    setIsListening(false)
+    setCurrentTranscript('')
+    setError(null)
+  }, [setStatusSafe])
 
   // Toggle mute
   const toggleMute = useCallback(() => {
