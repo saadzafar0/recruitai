@@ -4,6 +4,7 @@ import { LogOut, User, Briefcase, FileText, Settings, Bell, LucideIcon } from 'l
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { ThemeToggle, ThemeToggleMobile } from '@/components/ui/theme-toggle'
+import { MockInterviewCard } from '@/components/mock-interview'
 
 export default function UserPage() {
   const router = useRouter()
@@ -115,6 +116,16 @@ export default function UserPage() {
             </>
           )}
         </div>
+
+        {/* Mock Interview Section - Only for Candidates */}
+        {!isRecruiter && (
+          <>
+            <h3 className="text-sm font-semibold mb-4 text-text-primary">Practice & Prepare</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <MockInterviewCard onBegin={() => router.push('/mock-interview')} />
+            </div>
+          </>
+        )}
 
         {/* Settings & Sign Out */}
         <div className="flex flex-wrap gap-3">
