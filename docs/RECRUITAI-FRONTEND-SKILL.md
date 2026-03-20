@@ -23,7 +23,7 @@ description: >
 |---|---|
 | Framework | React 18 with TypeScript |
 | Routing | `react-router` (v7, `createBrowserRouter`) |
-| Styling | Tailwind CSS v4 + inline `style={}` for color tokens |
+| Styling | Tailwind CSS v4 (primary) — inline `style={}` only when Tailwind cannot achieve the result |
 | Animations | CSS `transition: all 0.2s ease` (no Framer Motion) |
 | Icons | `lucide-react` — line icons only, no filled colorful icons |
 | Font | `Inter` (400, 500, 600, 700) via Google Fonts |
@@ -34,7 +34,34 @@ description: >
 
 ## 2. Color System — "Midnight Slate"
 
-**Rule**: All colors are applied via inline `style={}` props — NOT Tailwind color utilities like `bg-purple-600`. Tailwind is used only for layout, spacing, and sizing utilities. Colors live in CSS variables (defined in `theme.css`) and are referenced in inline styles.
+**Rule — Tailwind First, Inline Style as Last Resort**:
+
+In `services/nextjs-web` (the main project), use **Tailwind CSS for everything possible** — layout, spacing, sizing, AND colors. Do not default to inline `style={}` just because the prototype did it that way.
+
+**How to apply the color tokens with Tailwind:**
+
+The CSS variables defined in `theme.css` are registered as Tailwind color tokens. Use them as Tailwind utilities:
+
+```tsx
+// ✅ Correct — Tailwind utility using the CSS variable token
+<div className="bg-card text-foreground border border-border" />
+
+// ✅ Also correct — Tailwind arbitrary value when no token name exists
+<div className="bg-[#7C6AEF] text-white hover:bg-[#9585F5]" />
+
+// ✅ Correct — Tailwind arbitrary value for rgba
+<div className="bg-[rgba(124,106,239,0.1)]" />
+
+// ❌ Wrong — inline style used when Tailwind could handle it
+<div style={{ backgroundColor: '#7C6AEF', color: '#fff' }} />
+```
+
+**The only cases where inline `style={}` is acceptable:**
+1. **Runtime-dynamic values** — a color or size computed from a JS variable at runtime (e.g., `style={{ width: \`${score}%\` }}` for a score bar that must be exact)
+2. **Complex transitions on hover via JS** — `onMouseEnter`/`onMouseLeave` that change styles imperatively (acceptable because Tailwind `hover:` classes don't support imperative toggling well in all cases)
+3. **Values that are genuinely not expressible** in Tailwind even with arbitrary values (rare — if in doubt, try arbitrary value first)
+
+Everything else — backgrounds, text colors, borders, border colors, shadows, padding, margin, border-radius — must use Tailwind classes.
 
 ### 2.1 CSS Variables (`src/styles/theme.css`)
 
@@ -114,7 +141,7 @@ Negative data:    #EF6B6B
 ### 2.5 Code Editor Colors
 
 ```
-Editor bg:      #0D1017
+Editor bg:      #0D1017    (same in both modes — code editor is always dark)
 Editor border:  #1A1D27
 Line number bg: #0A0D14
 Line numbers:   #3D4250
@@ -124,6 +151,134 @@ Console text:   #8A8F9E
 Console pass:   #3ECF8E
 ```
 
+### 2.6 Light Mode Color Tokens
+
+The app supports both dark (default/Midnight Slate) and light mode. Light mode keeps the same brand identity — same purple accent, same sidebar dark for continuity — but flips all surfaces to light values.
+
+**`theme.css` — `:root` (light mode) and `.dark` (dark mode):**
+
+```css
+/* ── LIGHT MODE (default :root) ─────────────────────────── */
+:root {
+  --background:        #EFF1F8;   /* soft blue-gray page bg */
+  --foreground:        #16181F;   /* near-black primary text */
+  --card:              #FFFFFF;   /* white cards/panels */
+  --card-foreground:   #16181F;
+  --popover:           #FFFFFF;
+  --popover-foreground:#16181F;
+  --primary:           #7C6AEF;   /* same purple accent */
+  --primary-foreground:#FFFFFF;
+  --secondary:         #E5E8F2;   /* light blue-gray surface (table headers, icon bg) */
+  --secondary-foreground:#16181F;
+  --muted:             #E5E8F2;
+  --muted-foreground:  #5A6072;   /* readable gray for secondary text */
+  --accent:            #EDF0FA;
+  --accent-foreground: #16181F;
+  --destructive:       #C93333;   /* darker red — readable on white */
+  --destructive-foreground:#FFFFFF;
+  --border:            rgba(0,0,0,0.08);
+  --input-background:  #F5F6FB;
+  --input-border:      rgba(0,0,0,0.12);
+  --hover-border:      rgba(0,0,0,0.18);
+  --ring:              #7C6AEF;
+  --switch-background: #CBD0E0;
+  --sidebar:           #0B0D13;   /* sidebar stays dark — brand decision */
+  --sidebar-foreground:#E2E4EB;
+  --sidebar-primary:   #7C6AEF;
+  --sidebar-primary-foreground:#FFFFFF;
+  --sidebar-accent:    #13151D;
+  --sidebar-accent-foreground: #E2E4EB;
+  --sidebar-border:    rgba(255,255,255,0.06);
+  --sidebar-ring:      #7C6AEF;
+  --header-bg:         #FFFFFF;   /* top nav bar in light mode */
+  --header-border:     rgba(0,0,0,0.08);
+  --overlay:           rgba(0,0,0,0.5);
+  /* Semantic — darkened for light-bg readability */
+  --success:           #1A9E67;   /* dark green text on light bg */
+  --success-bg:        rgba(26,158,103,0.08);
+  --warning:           #A06010;   /* dark amber text on light bg */
+  --warning-bg:        rgba(229,169,59,0.10);
+  --error:             #C93333;   /* dark red text on light bg */
+  --error-bg:          rgba(201,51,51,0.08);
+  --error-border:      rgba(201,51,51,0.2);
+  --accent-bg-faint:   rgba(124,106,239,0.08);
+  --accent-bg-medium:  rgba(124,106,239,0.14);
+}
+
+/* ── DARK MODE (.dark class on <html>) ───────────────────── */
+.dark {
+  --background:        #0F1117;
+  --foreground:        #E2E4EB;
+  --card:              #171921;
+  --card-foreground:   #E2E4EB;
+  --popover:           #171921;
+  --popover-foreground:#E2E4EB;
+  --primary:           #7C6AEF;
+  --primary-foreground:#FFFFFF;
+  --secondary:         #1D202A;
+  --secondary-foreground:#E2E4EB;
+  --muted:             #1D202A;
+  --muted-foreground:  #7E8494;
+  --accent:            #232738;
+  --accent-foreground: #E2E4EB;
+  --destructive:       #EF6B6B;
+  --destructive-foreground:#FFFFFF;
+  --border:            rgba(255,255,255,0.06);
+  --input-background:  #13151D;
+  --input-border:      rgba(255,255,255,0.08);
+  --hover-border:      rgba(255,255,255,0.12);
+  --ring:              #7C6AEF;
+  --switch-background: #2E3242;
+  --sidebar:           #0B0D13;
+  --sidebar-foreground:#E2E4EB;
+  --sidebar-primary:   #7C6AEF;
+  --sidebar-primary-foreground:#FFFFFF;
+  --sidebar-accent:    #13151D;
+  --sidebar-accent-foreground: #E2E4EB;
+  --sidebar-border:    rgba(255,255,255,0.06);
+  --sidebar-ring:      #7C6AEF;
+  --header-bg:         #13151D;
+  --header-border:     rgba(255,255,255,0.06);
+  --overlay:           rgba(0,0,0,0.6);
+  --success:           #3ECF8E;
+  --success-bg:        rgba(62,207,142,0.08);
+  --warning:           #E5A93B;
+  --warning-bg:        rgba(229,169,59,0.08);
+  --error:             #EF6B6B;
+  --error-bg:          rgba(239,107,107,0.08);
+  --error-border:      rgba(239,107,107,0.2);
+  --accent-bg-faint:   rgba(124,106,239,0.10);
+  --accent-bg-medium:  rgba(124,106,239,0.15);
+}
+```
+
+**Key light mode readability decisions:**
+
+| Color role | Dark mode | Light mode | Why changed |
+|---|---|---|---|
+| Success text | `#3ECF8E` | `#1A9E67` | Bright green unreadable on white (fails WCAG AA) |
+| Warning text | `#E5A93B` | `#A06010` | Amber too light on white bg |
+| Error text | `#EF6B6B` | `#C93333` | Salmon unreadable on white |
+| Score bar fill | `#9585F5` | `#7C6AEF` | Slightly darker for contrast on white bar track |
+| Muted text | `#7E8494` | `#5A6072` | Ensures ≥4.5:1 ratio on `#EFF1F8` bg |
+| Sidebar | `#0B0D13` | `#0B0D13` | **Kept dark** — brand identity, always readable |
+
+**Score color function — mode-aware** (use CSS variables, not hardcoded hex):
+
+```ts
+// In lib/scoreUtils.ts — use Tailwind arbitrary or CSS vars instead of hex returns
+function getScoreClass(score: number): string {
+  if (score >= 80) return 'text-[var(--success)]';
+  if (score >= 65) return 'text-[var(--warning)]';
+  return 'text-[var(--error)]';
+}
+
+// Score bar fill (inline width is still required, but color via CSS var):
+<div className="h-2 rounded-full" style={{ backgroundColor: 'var(--secondary)' }}>
+  <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: 'var(--primary)' }} />
+</div>
+```
+
 ---
 
 ## 3. Typography
@@ -131,7 +286,7 @@ Console pass:   #3ECF8E
 - **Font family**: `Inter`, system-ui, -apple-system, sans-serif
 - **Base size**: 16px (`--font-size: 16px`)
 - **Weights**: 400 (normal), 500 (medium), 600 (semibold), 700 (bold)
-- Use `fontWeight: 600` for headings, `fontWeight: 500` for labels/buttons, `fontWeight: 400` for body
+- Use `font-semibold` for headings, `font-medium` for labels/buttons, `font-normal` for body
 
 ### Typography Scale
 
@@ -734,17 +889,463 @@ When adding screens, features, or components beyond the prototype:
 
 ---
 
-## 14. Checklist Before Submitting Any Component
+## 14. Tailwind-First — Prototype vs Main Project
 
-- [ ] All colors use hex values or `rgba()` — no Tailwind color utilities
-- [ ] All interactive elements have `cursor-pointer` and hover state (onMouseEnter/Leave)
-- [ ] Inputs have `onFocus` border color change to `#7C6AEF`
+The prototype (`recruitai_proto`) was built quickly and uses inline `style={}` extensively. **Do not replicate this pattern in `services/nextjs-web`**. Every time you reference the prototype for a visual target, translate its inline styles to Tailwind classes:
+
+| Prototype pattern | Main project equivalent |
+|---|---|
+| `style={{ backgroundColor: '#171921' }}` | `className="bg-card"` |
+| `style={{ backgroundColor: '#0F1117' }}` | `className="bg-background"` |
+| `style={{ backgroundColor: '#0B0D13' }}` | `className="bg-sidebar"` |
+| `style={{ backgroundColor: '#13151D' }}` | `className="bg-[#13151D]"` (arbitrary) |
+| `style={{ backgroundColor: '#1D202A' }}` | `className="bg-secondary"` |
+| `style={{ color: '#E2E4EB' }}` | `className="text-foreground"` |
+| `style={{ color: '#7E8494' }}` | `className="text-muted-foreground"` |
+| `style={{ color: '#7C6AEF' }}` | `className="text-primary"` |
+| `style={{ color: '#3ECF8E' }}` | `className="text-[#3ECF8E]"` (arbitrary) |
+| `style={{ color: '#E5A93B' }}` | `className="text-[#E5A93B]"` (arbitrary) |
+| `style={{ color: '#EF6B6B' }}` | `className="text-destructive"` |
+| `style={{ borderColor: 'rgba(255,255,255,0.06)' }}` | `className="border-border"` |
+| `style={{ borderColor: '#7C6AEF' }}` | `className="border-primary"` |
+| `style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}` | `className="shadow-sm"` or `className="shadow-[0_1px_3px_rgba(0,0,0,0.3)]"` |
+| `style={{ backgroundColor: '#7C6AEF' }}` on button | `className="bg-primary text-primary-foreground"` |
+| `style={{ fontSize: '0.875rem' }}` | `className="text-sm"` |
+| `style={{ fontWeight: 600 }}` | `className="font-semibold"` |
+| `style={{ fontWeight: 500 }}` | `className="font-medium"` |
+| `style={{ opacity: 0.6 }}` | `className="opacity-60"` |
+
+**Hover states with Tailwind**: Use `hover:` prefix classes wherever possible. Reserve `onMouseEnter`/`onMouseLeave` only for cases where the hover target and the styled element are different (e.g., hovering a row changes a child's style), or where the hover changes computed/dynamic values.
+
+```tsx
+// ✅ Prefer Tailwind hover
+<button className="bg-primary hover:bg-[#9585F5] text-white transition-colors cursor-pointer" />
+
+// ✅ Tailwind hover for border
+<div className="border border-border hover:border-[rgba(255,255,255,0.12)] transition-colors" />
+
+// ✅ Tailwind hover for table rows
+<tr className="border-t border-border hover:bg-white/[0.04] transition-colors cursor-pointer" />
+```
+
+**Score bar width** is the canonical example of a legitimate inline style (must be dynamic):
+```tsx
+// ✅ Only inline style needed here — width is runtime-dynamic
+<div className="h-2 rounded-full bg-[#9585F5]"
+  style={{ width: `${value}%` }} />
+```
+
+---
+
+## 15. Modularization Rules — `services/nextjs-web`
+
+The prototype puts multiple concerns in one file (page + sub-components + helpers + types + constants all in one `.tsx`). **The main project must not do this.** Every file should have a single clear responsibility.
+
+### File Structure Per Feature
+
+```
+src/
+├── app/
+│   ├── (recruiter)/
+│   │   ├── dashboard/
+│   │   │   └── page.tsx                  ← page entry only (imports components)
+│   │   ├── candidates/
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/
+│   │   │       └── page.tsx
+│   │   └── ...
+│   └── (candidate)/
+│       └── ...
+├── components/
+│   ├── layout/
+│   │   ├── RecruiterSidebar.tsx          ← sidebar nav only
+│   │   ├── RecruiterHeader.tsx           ← top bar only
+│   │   ├── CandidateHeader.tsx           ← candidate top nav only
+│   │   └── StageProgressIndicator.tsx    ← progress dots only
+│   ├── ui/                               ← shadcn primitives (unchanged)
+│   ├── recruiter/
+│   │   ├── KpiCard.tsx                   ← single KPI card
+│   │   ├── RecruitmentFunnel.tsx         ← funnel chart only
+│   │   ├── RecentActivityTable.tsx       ← table only
+│   │   ├── CandidateTable.tsx            ← leaderboard table
+│   │   ├── CandidateFilterBar.tsx        ← filter row only
+│   │   ├── ScoreBar.tsx                  ← reusable score bar
+│   │   ├── CollapsibleSection.tsx        ← reusable collapsible
+│   │   ├── StatusBadge.tsx               ← reusable status badge
+│   │   ├── ConfirmModal.tsx              ← reusable confirm dialog
+│   │   ├── CandidateProfileCard.tsx      ← left column of profile
+│   │   ├── CandidateScorePanel.tsx       ← right column of profile
+│   │   ├── TranscriptViewer.tsx          ← interview transcript
+│   │   ├── ScoreCharts.tsx               ← interview score charts
+│   │   └── CodeReviewPanel.tsx           ← assessment code view
+│   ├── candidate/
+│   │   ├── HardwareStatusRow.tsx         ← mic/browser/camera checks
+│   │   ├── TaskCard.tsx                  ← single assessment task card
+│   │   ├── ProblemStatement.tsx          ← coding IDE left panel
+│   │   ├── CodeEditor.tsx                ← editor center panel
+│   │   ├── TestResultsPanel.tsx          ← IDE right panel
+│   │   └── DiagramCanvas.tsx             ← system design drag-drop
+│   └── common/
+│       ├── UserAvatar.tsx                ← initials avatar (reused everywhere)
+│       ├── PageHeading.tsx               ← title + subtitle block
+│       ├── SkillTag.tsx                  ← outlined tag chip
+│       ├── ErrorBanner.tsx               ← red error alert
+│       └── BackButton.tsx                ← ← back navigation button
+├── lib/
+│   ├── utils.ts                          ← cn(), getInitials(), etc.
+│   ├── scoreUtils.ts                     ← getScoreColor(), score helpers
+│   └── formatters.ts                     ← date, number formatting
+├── types/
+│   ├── candidate.ts                      ← Candidate, Score, Status types
+│   ├── recruiter.ts                      ← Job, Assessment types
+│   └── auth.ts                           ← User, Role types
+├── constants/
+│   ├── mockData.ts                       ← all mock candidates, jobs, etc.
+│   ├── statusConfig.ts                   ← statusConfig map
+│   └── navItems.ts                       ← sidebar nav item definitions
+└── context/
+    ├── AuthContext.tsx                   ← auth state only
+    └── CandidateContext.tsx              ← candidate assessment state only
+```
+
+### Modularization Rules (Non-Negotiable)
+
+1. **One component per file** — never define multiple exported components in the same file. A file may have one default export and private sub-components used only within it, but if a sub-component is used in more than one place, it must be extracted to its own file.
+
+2. **Page files are thin** — a `page.tsx` (or route component) should contain almost no JSX logic. It imports composed components and wires data/navigation. If a page file exceeds ~60 lines, something should be extracted.
+
+3. **No logic in JSX** — complex conditions, data transforms, and array operations must live in a `const` or helper above the `return`, or in a `lib/` utility. Never inline a `.filter().sort().map()` chain directly in JSX.
+
+4. **Reusable components live in `components/`** — if the same visual pattern appears on more than one page (score bar, badge, avatar, card, modal), it must be a shared component with props, not copy-pasted.
+
+5. **Types in `types/`** — no inline `type` or `interface` declarations inside component files unless they are truly local (props interface for a leaf component is fine inline; shared domain types must live in `types/`).
+
+6. **Constants and mock data in `constants/`** — no hardcoded arrays or objects inside component or page files. Import from `constants/`.
+
+7. **Utility functions in `lib/`** — `getScoreColor`, `getInitials`, `cn()`, date formatters, etc. must be imported from `lib/`, never redefined per-file.
+
+8. **Context files contain only context** — no unrelated helper functions or constants inside a context file.
+
+9. **Hooks in `hooks/`** — any `useState`/`useEffect` logic that is reused or complex enough to be named (e.g., `useHardwareCheck`, `useCountdownTimer`) must be extracted to a custom hook file in `hooks/`.
+
+10. **Do not put CSS/style logic in components** — if a component needs conditional class names, use `cn()` from `lib/utils.ts`. Never build class strings with raw string interpolation inside JSX.
+
+---
+
+---
+
+## 16. Dark / Light Mode System
+
+### 16.1 Setup — `next-themes`
+
+Install and configure `next-themes` to manage the theme class on `<html>`:
+
+```bash
+npm install next-themes
+```
+
+**`app/providers.tsx`** (create this file):
+```tsx
+'use client';
+import { ThemeProvider } from 'next-themes';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemeProvider
+      attribute="class"        // adds/removes "dark" class on <html>
+      defaultTheme="dark"      // RecruitAI defaults to dark mode
+      enableSystem={true}      // respects OS preference on first visit
+      disableTransitionOnChange={false}
+    >
+      {children}
+    </ThemeProvider>
+  );
+}
+```
+
+**`app/layout.tsx`** — wrap children and add `suppressHydrationWarning`:
+```tsx
+import { Providers } from './providers';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+`suppressHydrationWarning` is required because `next-themes` sets the class server-side and client-side may differ before hydration.
+
+---
+
+### 16.2 Theme Toggle Component
+
+**`components/common/ThemeToggle.tsx`**:
+```tsx
+'use client';
+import { useTheme } from 'next-themes';
+import { Sun, Moon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+export default function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch — only render after mount
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="w-8 h-8" />; // same size placeholder
+
+  const isDark = theme === 'dark';
+
+  return (
+    <button
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      className="w-8 h-8 flex items-center justify-center rounded transition-colors cursor-pointer
+                 text-muted-foreground hover:text-foreground hover:bg-secondary"
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label="Toggle theme"
+    >
+      {isDark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
+  );
+}
+```
+
+**Placement**: Add `<ThemeToggle />` in the header bar of both `RecruiterHeader` and `CandidateHeader`, immediately before the notification bell or avatar. It appears on every page, every screen size — including mobile (the header is always visible).
+
+---
+
+### 16.3 Tailwind `dark:` Variant — How to Use
+
+With `attribute="class"` in ThemeProvider, Tailwind's `dark:` variant activates whenever `<html>` has the `dark` class. Write all components with paired light/dark classes:
+
+```tsx
+// Page background
+<div className="bg-[#EFF1F8] dark:bg-background" />
+
+// Card
+<div className="bg-white dark:bg-card border border-[rgba(0,0,0,0.08)] dark:border-border rounded-lg shadow-sm" />
+
+// Primary text
+<h1 className="text-[#16181F] dark:text-foreground font-semibold" />
+
+// Secondary / muted text
+<p className="text-[#5A6072] dark:text-muted-foreground text-sm" />
+
+// Table header row
+<tr className="bg-[#E5E8F2] dark:bg-secondary" />
+
+// Input
+<input className="bg-[#F5F6FB] dark:bg-[#13151D]
+                  border border-[rgba(0,0,0,0.12)] dark:border-[rgba(255,255,255,0.08)]
+                  text-[#16181F] dark:text-foreground
+                  focus:border-primary rounded-lg outline-none transition-colors" />
+
+// Top header bar
+<header className="bg-white dark:bg-[#13151D]
+                   border-b border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.06)]" />
+
+// Modal backdrop
+<div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/60" />
+
+// Hover on table row
+<tr className="border-t border-[rgba(0,0,0,0.08)] dark:border-border
+               hover:bg-black/[0.03] dark:hover:bg-white/[0.04]
+               transition-colors cursor-pointer" />
+
+// Outlined secondary button
+<button className="border border-[rgba(0,0,0,0.12)] dark:border-[rgba(255,255,255,0.06)]
+                   text-[#5A6072] dark:text-muted-foreground
+                   hover:bg-[#E5E8F2] dark:hover:bg-secondary
+                   transition-colors cursor-pointer rounded-lg" />
+```
+
+**The sidebar never gets `dark:` variants** — it is permanently dark (`bg-sidebar` / `#0B0D13`) in both modes. Sidebar text, borders, and nav items remain as-is.
+
+**The code editor never gets `dark:` variants** — it is permanently dark in both modes (always `#0D1017` bg).
+
+---
+
+### 16.4 Semantic Color Classes — Mode-Aware
+
+Because semantic colors differ between modes (see §2.6 table), always use CSS variable references via Tailwind arbitrary values or direct `style`:
+
+```tsx
+// Score text — always readable in both modes
+<span className="text-[var(--success)] text-sm font-semibold">{score}</span>
+<span className="text-[var(--warning)] text-sm font-semibold">{score}</span>
+<span className="text-[var(--error)] text-sm font-semibold">{score}</span>
+
+// Score badge backgrounds — always readable in both modes
+<span className="text-xs px-2 py-0.5 rounded"
+  style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)' }}>
+  Passed
+</span>
+
+// Error alert banner
+<div className="px-3 py-2.5 rounded text-sm"
+  style={{
+    color: 'var(--error)',
+    backgroundColor: 'var(--error-bg)',
+    border: '1px solid var(--error-border)',
+  }}>
+  {message}
+</div>
+```
+
+Using `var(--)` CSS variables directly means the value automatically switches when the `.dark` class toggles on `<html>` — no `dark:` variant duplication needed for semantic colors.
+
+---
+
+### 16.5 Status Badge — Mode-Aware
+
+Update `constants/statusConfig.ts` to use CSS variable references:
+
+```ts
+export const statusConfig = {
+  shortlisted:  { label: 'Shortlisted',  colorVar: 'var(--primary)',     bgVar: 'var(--accent-bg-faint)' },
+  under_review: { label: 'Under Review', colorVar: 'var(--warning)',     bgVar: 'var(--warning-bg)' },
+  rejected:     { label: 'Rejected',     colorVar: 'var(--error)',       bgVar: 'var(--error-bg)' },
+  hired:        { label: 'Hired',        colorVar: 'var(--success)',     bgVar: 'var(--success-bg)' },
+  advanced:     { label: 'Advanced',     colorVar: 'var(--success)',     bgVar: 'var(--success-bg)' },
+  not_started:  { label: 'Not Started',  colorVar: 'var(--muted-foreground)', bgVar: 'var(--secondary)' },
+  in_progress:  { label: 'In Progress',  colorVar: 'var(--warning)',     bgVar: 'var(--warning-bg)' },
+  completed:    { label: 'Completed',    colorVar: 'var(--success)',     bgVar: 'var(--success-bg)' },
+};
+
+// StatusBadge component (components/recruiter/StatusBadge.tsx):
+export function StatusBadge({ status }: { status: keyof typeof statusConfig }) {
+  const s = statusConfig[status];
+  return (
+    <span className="text-xs px-2 py-0.5 rounded font-medium"
+      style={{ color: s.colorVar, backgroundColor: s.bgVar }}>
+      {s.label}
+    </span>
+  );
+}
+```
+
+---
+
+### 16.6 `getScoreColor` — Mode-Aware
+
+Replace the hardcoded hex version in `lib/scoreUtils.ts`:
+
+```ts
+// Returns a CSS variable reference that auto-adapts to mode
+export function getScoreColorVar(score: number): string {
+  if (score >= 80) return 'var(--success)';
+  if (score >= 65) return 'var(--warning)';
+  return 'var(--error)';
+}
+
+// For Tailwind class usage:
+export function getScoreClass(score: number): string {
+  if (score >= 80) return 'text-[var(--success)]';
+  if (score >= 65) return 'text-[var(--warning)]';
+  return 'text-[var(--error)]';
+}
+```
+
+Usage:
+```tsx
+// In JSX (Tailwind arbitrary):
+<span className={cn('text-sm font-semibold', getScoreClass(score))}>
+  {score}/100
+</span>
+
+// Or inline for dynamic elements:
+<div style={{ color: getScoreColorVar(score) }}>{score}/100</div>
+```
+
+---
+
+### 16.7 Transition on Theme Switch
+
+Add a global smooth transition so the theme flip doesn't jar the user. In `globals.css` or `theme.css`:
+
+```css
+*,
+*::before,
+*::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+```
+
+**Exception**: disable transition on elements where it would cause layout flicker (e.g., SVG paths, images). Scope carefully:
+
+```css
+img, svg, video, canvas {
+  transition: none;
+}
+```
+
+---
+
+### 16.8 Responsive — Toggle Visibility at All Sizes
+
+The ThemeToggle must be visible and tappable at all screen sizes:
+
+- **Desktop (lg+)**: visible in header, between Bell icon and Avatar
+- **Mobile**: visible in the same header — the mobile header is always full-width and always shown; the toggle must be part of the `flex items-center gap-3` row in the header's right side
+- Minimum tap target: `w-8 h-8` (32×32px) — already enforced in the component above
+- Never hide the toggle behind a collapsed menu or hamburger — it must always be directly accessible
+
+---
+
+### 16.9 KPI / Stat Cards — Light Mode Specific
+
+KPI cards use a `borderTop: '3px solid #7C6AEF'` accent. This works in both modes — purple on white card is fine. The icon background changes:
+
+```tsx
+// Icon background in KPI card
+<div className="w-9 h-9 rounded flex items-center justify-center bg-[#E5E8F2] dark:bg-secondary">
+  <Icon size={16} className="text-primary" />
+</div>
+```
+
+---
+
+### 16.10 Common Pitfalls to Avoid
+
+| ❌ Wrong | ✅ Correct |
+|---|---|
+| Hardcoded `#E2E4EB` text color | `text-[#16181F] dark:text-foreground` or `text-[var(--foreground)]` |
+| Hardcoded `#171921` card bg | `bg-white dark:bg-card` |
+| Hardcoded `#7E8494` muted text | `text-[#5A6072] dark:text-muted-foreground` |
+| Hardcoded `#3ECF8E` success text | `text-[var(--success)]` |
+| Sidebar with `dark:` variants | Leave sidebar styles as-is (always dark) |
+| `next-themes` without `suppressHydrationWarning` | Always add to `<html>` tag |
+| ThemeToggle rendered server-side without mount check | Always gate render behind `mounted` state |
+| Theme toggle hidden on mobile | Must always be visible in header |
+
+---
+
+## 17. Checklist Before Submitting Any Component
+
+- [ ] **Tailwind-first**: no inline `style={}` unless it's a runtime-dynamic value or a proven Tailwind impossibility
+- [ ] Colors use Tailwind token classes or arbitrary values — not bare inline styles; every surface has `bg-X dark:bg-Y` / `text-X dark:text-Y` where applicable
+- [ ] `hover:` Tailwind prefix used for hover states wherever possible; `onMouseEnter/Leave` only where truly needed
+- [ ] All interactive elements have `cursor-pointer` and a visible hover state
+- [ ] Inputs have `focus:border-primary` and matching focus background (Tailwind or `onFocus` if dynamic)
 - [ ] Responsive: tested at 375px (mobile), 640px (sm), 1024px (lg)
 - [ ] Tables wrapped in `overflow-x-auto` with `min-w-[NNNpx]`
 - [ ] Page content wrapped in `p-4 sm:p-6`
-- [ ] Card shadow, border, and `#171921` background applied
-- [ ] Score colors use `getScoreColor()` (≥80 green, ≥65 amber, <65 red)
-- [ ] Status badges use correct `statusConfig` color + bg pairs
+- [ ] Card has `bg-white dark:bg-card border border-[rgba(0,0,0,0.08)] dark:border-border shadow-sm rounded-lg`
+- [ ] Score colors use `getScoreColorVar()` / `getScoreClass()` from `lib/scoreUtils.ts` — never hardcoded hex
+- [ ] Status badges use CSS variable refs from `constants/statusConfig.ts` — not hardcoded hex
+- [ ] Semantic colors (`--success`, `--warning`, `--error`) use `var(--)` refs so they auto-adapt to mode
+- [ ] Sidebar and code editor have **no** `dark:` variants — they are always dark
+- [ ] `ThemeToggle` component present in both `RecruiterHeader` and `CandidateHeader`, visible at all screen sizes
+- [ ] `<html>` in `layout.tsx` has `suppressHydrationWarning`
+- [ ] `ThemeToggle` has `mounted` guard (no render until after hydration)
 - [ ] Candidate names match the Pakistani names list (§11)
 - [ ] Modal has overlay backdrop, X close button, and Cancel + Confirm actions
-- [ ] `transition-colors` or `transition: all 0.2s ease` on all interactive elements
+- [ ] `transition-colors` Tailwind class on all interactive elements
+- [ ] **Modularization**: page file is thin (<60 lines); no logic in JSX; reusable components extracted to `components/`
+- [ ] No types, constants, or helpers defined inside the component file (use `types/`, `constants/`, `lib/`)
+- [ ] No component defined in more than one file (shared = extracted to `components/common/` or feature folder)
