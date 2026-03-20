@@ -23,8 +23,8 @@ export function AuthSelect({ label, value, onChange, options }: AuthSelectProps)
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full appearance-none pl-3 pr-8 py-2.5 text-sm rounded border outline-none cursor-pointer
-            bg-dark-input text-text-primary border-border-input
-            focus:border-accent-purple focus:bg-dark-card
+            bg-theme-input text-text-primary border-theme-border-input
+            focus:border-accent-purple focus:bg-theme-card
             transition-colors"
         >
           {options.map((option) => (

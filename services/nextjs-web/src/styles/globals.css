@@ -2,8 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Dark theme (default) */
+:root,
+.dark {
   color-scheme: dark;
+
+  /* Backgrounds */
+  --color-bg: #0f1117;
+  --color-bg-card: #171921;
+  --color-bg-input: #13151d;
+  --color-bg-elevated: #1a1d27;
+
+  /* Text */
+  --color-text-primary: #e2e4eb;
+  --color-text-secondary: #7e8494;
+
+  /* Accents */
+  --color-accent-purple: #7c6aef;
+  --color-accent-purple-hover: #9585f5;
+  --color-accent-green: #3ecf8e;
+  --color-accent-red: #ef6b6b;
+
+  /* Borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-input: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.1);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.18);
+}
+
+/* Light theme */
+.light {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --color-bg: #f8f9fb;
+  --color-bg-card: #ffffff;
+  --color-bg-input: #f3f4f6;
+  --color-bg-elevated: #ffffff;
+
+  /* Text */
+  --color-text-primary: #1a1d27;
+  --color-text-secondary: #6b7280;
+
+  /* Accents - slightly adjusted for light mode visibility */
+  --color-accent-purple: #7c6aef;
+  --color-accent-purple-hover: #6b5ad4;
+  --color-accent-green: #16a34a;
+  --color-accent-red: #dc2626;
+
+  /* Borders */
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-input: rgba(0, 0, 0, 0.1);
+  --color-border-hover: rgba(0, 0, 0, 0.15);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
 }
 
 html,
@@ -14,9 +79,10 @@ body,
 
 body {
   margin: 0;
-  background: #0f1117;
-  color: #e2e4eb;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Smooth transitions for interactive elements */
@@ -39,10 +105,25 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Select option styling for light mode */
+select option {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+/* Focus ring utility */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-accent-purple);
 }

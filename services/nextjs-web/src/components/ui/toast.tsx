@@ -54,7 +54,7 @@ export function Toast({ id, type, message, onClose, duration = 4000 }: ToastProp
     <div
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg border max-w-sm',
-        'bg-dark-card shadow-lg',
+        'bg-theme-card shadow-theme-elevated',
         'transition-all duration-300 ease-out',
         isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0',
         config.className

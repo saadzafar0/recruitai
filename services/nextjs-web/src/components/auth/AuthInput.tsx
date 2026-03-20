@@ -33,8 +33,9 @@ export function AuthInput({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full pl-9 pr-3 py-2.5 text-sm rounded border outline-none
-            bg-dark-input text-text-primary border-border-input
-            focus:border-accent-purple focus:bg-dark-card
+            bg-theme-input text-text-primary border-theme-border-input
+            focus:border-accent-purple focus:bg-theme-card
+            placeholder:text-text-secondary/50
             transition-colors"
         />
       </div>

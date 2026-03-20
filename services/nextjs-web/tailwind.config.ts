@@ -6,29 +6,44 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Midnight Slate color system
+        // CSS variable-based colors for theme support
+        'theme-bg': 'var(--color-bg)',
+        'theme-card': 'var(--color-bg-card)',
+        'theme-input': 'var(--color-bg-input)',
+        'theme-elevated': 'var(--color-bg-elevated)',
+        'theme-text': 'var(--color-text-primary)',
+        'theme-text-secondary': 'var(--color-text-secondary)',
+        'theme-border': 'var(--color-border-subtle)',
+        'theme-border-input': 'var(--color-border-input)',
+        'theme-border-hover': 'var(--color-border-hover)',
+        // Midnight Slate color system (using CSS vars for theme support)
         dark: {
-          bg: '#0F1117',
-          card: '#171921',
-          input: '#13151D',
+          bg: 'var(--color-bg)',
+          card: 'var(--color-bg-card)',
+          input: 'var(--color-bg-input)',
         },
         text: {
-          primary: '#E2E4EB',
-          secondary: '#7E8494',
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
         },
         accent: {
-          purple: '#7C6AEF',
-          'purple-hover': '#9585F5',
-          green: '#3ECF8E',
-          red: '#EF6B6B',
+          purple: 'var(--color-accent-purple)',
+          'purple-hover': 'var(--color-accent-purple-hover)',
+          green: 'var(--color-accent-green)',
+          red: 'var(--color-accent-red)',
         },
         border: {
-          subtle: 'rgba(255,255,255,0.06)',
-          input: 'rgba(255,255,255,0.08)',
+          subtle: 'var(--color-border-subtle)',
+          input: 'var(--color-border-input)',
         },
+      },
+      boxShadow: {
+        'theme-card': 'var(--shadow-card)',
+        'theme-elevated': 'var(--shadow-elevated)',
       },
     },
   },

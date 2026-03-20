@@ -11,6 +11,7 @@ import {
   AuthInput,
   AuthButton,
 } from '@/components/auth'
+import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 
 export default function Login() {
   const router = useRouter()
@@ -48,7 +49,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-dark-bg">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-theme-bg transition-colors relative">
+      {/* Theme toggle - positioned in top right corner */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggleMobile />
+      </div>
+
       <div className="w-full max-w-md">
         <AuthCard>
           <AuthLogo />
@@ -96,7 +102,7 @@ export default function Login() {
 
         <p className="text-center text-xs mt-4 text-text-secondary/60">
           <Link href="/" className="text-accent-purple hover:underline">
-            ← Back to homepage
+            &larr; Back to homepage
           </Link>
         </p>
       </div>
