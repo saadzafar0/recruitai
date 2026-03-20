@@ -1,3 +1,9 @@
+/**
+ * User Page
+ * Landing page for authenticated users - redirects recruiters to their dashboard
+ * or shows candidate dashboard for applicants
+ */
+
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { LogOut, User, Briefcase, FileText, Settings, Bell, LucideIcon } from 'lucide-react'
@@ -14,6 +20,9 @@ export default function UserPage() {
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
+    } else if (!loading && user && user.role === 'recruiter') {
+      // Redirect recruiters to their dedicated dashboard
+      router.push('/recruiter')
     }
   }, [loading, user, router])
 
@@ -34,10 +43,10 @@ export default function UserPage() {
     )
   }
 
-  if (!user) return null
+  // Don't render if not logged in or if recruiter (will redirect)
+  if (!user || user.role === 'recruiter') return null
 
-  const isRecruiter = user.role === 'recruiter'
-  const displayRole = isRecruiter ? 'Recruiter' : 'Candidate'
+  const displayRole = 'Candidate'
 
   return (
     <div className="min-h-screen bg-theme-bg transition-colors">
@@ -92,7 +101,7 @@ export default function UserPage() {
               </h2>
               <p className="text-sm mb-3 text-text-secondary">{user.email}</p>
               <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded bg-accent-purple/10 text-accent-purple">
-                {isRecruiter ? <Briefcase size={12} /> : <User size={12} />}
+                <User size={12} />
                 {displayRole}
               </span>
             </div>
@@ -102,30 +111,16 @@ export default function UserPage() {
         {/* Quick Actions Grid */}
         <h3 className="text-sm font-semibold mb-4 text-text-primary">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {isRecruiter ? (
-            <>
-              <QuickActionCard icon={Briefcase} title="Job Postings" description="Create and manage job postings" />
-              <QuickActionCard icon={User} title="Candidates" description="View and evaluate applicants" />
-              <QuickActionCard icon={FileText} title="Assessments" description="Review coding and interview results" />
-            </>
-          ) : (
-            <>
-              <QuickActionCard icon={FileText} title="My Applications" description="View your job applications" />
-              <QuickActionCard icon={Briefcase} title="Browse Jobs" description="Find new opportunities" />
-              <QuickActionCard icon={User} title="My Profile" description="Update your profile and CV" />
-            </>
-          )}
+          <QuickActionCard icon={FileText} title="My Applications" description="View your job applications" />
+          <QuickActionCard icon={Briefcase} title="Browse Jobs" description="Find new opportunities" />
+          <QuickActionCard icon={User} title="My Profile" description="Update your profile and CV" />
         </div>
 
-        {/* Mock Interview Section - Only for Candidates */}
-        {!isRecruiter && (
-          <>
-            <h3 className="text-sm font-semibold mb-4 text-text-primary">Practice & Prepare</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <MockInterviewCard onBegin={() => router.push('/mock-interview')} />
-            </div>
-          </>
-        )}
+        {/* Mock Interview Section */}
+        <h3 className="text-sm font-semibold mb-4 text-text-primary">Practice & Prepare</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <MockInterviewCard onBegin={() => router.push('/candidate/mock-interview')} />
+        </div>
 
         {/* Settings & Sign Out */}
         <div className="flex flex-wrap gap-3">
@@ -155,7 +150,11 @@ interface QuickActionCardProps {
 
 function QuickActionCard({ icon: Icon, title, description }: QuickActionCardProps) {
   return (
-    <div className="rounded-lg border p-5 cursor-pointer bg-theme-card border-theme-border shadow-theme-card hover:border-theme-border-hover transition-colors">
+    <div className="rounded-lg border p-5 cursor-pointer bg-theme-card border-theme-border shadow-theme-card
+      transition-all duration-200 ease-out
+      hover:shadow-lg hover:-translate-y-[2px]
+      hover:bg-accent-purple/5 dark:hover:bg-accent-purple/10"
+    >
       <div className="w-10 h-10 rounded flex items-center justify-center mb-3 bg-accent-purple/10">
         <Icon size={18} className="text-accent-purple" />
       </div>

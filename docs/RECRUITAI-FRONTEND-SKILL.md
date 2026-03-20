@@ -368,6 +368,11 @@ onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)
 onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
 ```
 
+**Card hover motion (all cards):**
+```tsx
+className="transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(0,0,0,0.18)]"
+```
+
 ### 5.2 Buttons
 
 **Primary (filled):**
@@ -467,6 +472,10 @@ className="w-full py-2.5 text-sm text-white rounded transition-colors cursor-poi
 - Table headers: `text-xs uppercase tracking-wider` in `#7E8494` on `#1D202A` background
 - Table rows: `py-3.5` padding, hover `rgba(255,255,255,0.04)` bg
 - Always use `overflow-x-auto` with `min-w-[600px]` on the table for mobile
+- If row is clickable, add subtle lift + shadow on hover:
+```tsx
+className="transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(0,0,0,0.14)]"
+```
 
 ### 5.5 Avatar / Initials
 
@@ -693,6 +702,8 @@ onMouseLeave: clear all overrides
 - **Hover effects** (implement via onMouseEnter/Leave inline, not Tailwind hover:):
   - Buttons: shift `backgroundColor` from primary to hover shade
   - Table rows: `rgba(255,255,255,0.04)` background
+  - Cards: slight lift (`translateY`) + subtle shadow
+  - Clickable table rows: slight lift (`translateY`) + subtle shadow
   - Sidebar items: see §6.1
   - Clickable cards: border lightens to `rgba(255,255,255,0.12)`
   - Icon buttons (Bell, LogOut, etc.): color shifts from `#7E8494` to `#7C6AEF`
