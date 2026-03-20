@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ThemeToggle, ThemeToggleMobile } from '@/components/ui/theme-toggle'
 
 const featureCards = [
   {
@@ -84,23 +85,27 @@ export default function HomepageTailwind() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F1117] text-[#E2E4EB]">
-      <header className="border-b border-white/10 bg-[#13151D]">
+    <div className="min-h-screen bg-theme-bg text-theme-text transition-colors">
+      <header className="border-b border-theme-border bg-theme-input transition-colors">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-[#7C6AEF]">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-accent-purple">
               <span className="text-sm font-semibold text-white">R</span>
             </div>
-            <span className="text-lg font-semibold text-[#E2E4EB]">RecruitAI</span>
+            <span className="text-lg font-semibold text-theme-text">RecruitAI</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* TODO: Add /login page route if not present in pages directory */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Theme toggle - mobile version (visible on small screens) */}
+            <ThemeToggleMobile className="sm:hidden" />
+            {/* Theme toggle - desktop version (hidden on small screens) */}
+            <ThemeToggle className="hidden sm:flex" />
             <Button variant="outline" onClick={() => router.push('/login')}>
               Log In
             </Button>
-            {/* TODO: Add /signup page route if not present in pages directory */}
-            <Button onClick={() => router.push('/signup')}>Sign Up</Button>
+            <Button onClick={() => router.push('/signup')} className="hidden sm:inline-flex">
+              Sign Up
+            </Button>
           </div>
         </div>
       </header>
@@ -112,18 +117,17 @@ export default function HomepageTailwind() {
             Trusted by 500+ companies worldwide
           </Badge>
 
-          <h1 className="mb-4 text-[clamp(1.5rem,5vw,2.5rem)] font-semibold leading-tight text-[#E2E4EB]">
+          <h1 className="mb-4 text-[clamp(1.5rem,5vw,2.5rem)] font-semibold leading-tight text-theme-text">
             Hire Smarter with AI-Powered Recruitment
           </h1>
-          <p className="mb-2 text-lg leading-relaxed text-[#7E8494]">
+          <p className="mb-2 text-lg leading-relaxed text-theme-text-secondary">
             Automate your entire hiring pipeline — from CV parsing to voice interviews
           </p>
-          <p className="mb-10 text-base text-[#7E8494]/75">
+          <p className="mb-10 text-base text-theme-text-secondary/75">
             Score candidates objectively, reduce time-to-hire by 70%, and focus on people who matter most.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            {/* TODO: Add /signup page route if not present in pages directory */}
             <Button size="lg" onClick={() => router.push('/signup')}>
               Get Started
               <ArrowRight size={15} />
@@ -137,26 +141,26 @@ export default function HomepageTailwind() {
 
       <section className="px-4 pb-12 sm:px-6 sm:pb-20">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-2 text-center text-[1.375rem] font-semibold text-[#E2E4EB]">
+          <h2 className="mb-2 text-center text-[1.375rem] font-semibold text-theme-text">
             Everything you need to hire better, faster
           </h2>
-          <p className="mb-10 text-center text-sm text-[#7E8494]">Three assessment pillars, one unified platform.</p>
+          <p className="mb-10 text-center text-sm text-theme-text-secondary">Three assessment pillars, one unified platform.</p>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {featureCards.map(({ icon: Icon, title, description, metrics }) => (
-              <Card key={title} className="cursor-pointer border-t-[3px] border-t-[#7C6AEF] hover:border-[#7C6AEF]">
+              <Card key={title} className="cursor-pointer border-t-[3px] border-t-accent-purple hover:border-accent-purple">
                 <CardHeader>
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded bg-[#7C6AEF]/10">
-                    <Icon size={18} className="text-[#7C6AEF]" />
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded bg-accent-purple/10">
+                    <Icon size={18} className="text-accent-purple" />
                   </div>
                   <CardTitle>{title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="mb-4 text-sm leading-relaxed text-[#7E8494]">{description}</p>
+                  <p className="mb-4 text-sm leading-relaxed text-theme-text-secondary">{description}</p>
                   <ul className="space-y-1.5">
                     {metrics.map((metric) => (
-                      <li key={metric} className="flex items-center gap-2 text-sm text-[#7E8494]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#3ECF8E]" />
+                      <li key={metric} className="flex items-center gap-2 text-sm text-theme-text-secondary">
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
                         {metric}
                       </li>
                     ))}
@@ -168,45 +172,45 @@ export default function HomepageTailwind() {
         </div>
       </section>
 
-      <section className="border-y border-white/10 bg-[#171921] py-10">
+      <section className="border-y border-theme-border bg-theme-card py-10 transition-colors">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 px-4 text-center sm:grid-cols-4 sm:px-6">
           {stats.map(({ value, label }) => (
             <div key={label}>
-              <p className="mb-1 text-[1.75rem] font-semibold text-[#7C6AEF]">{value}</p>
-              <p className="text-sm text-[#7E8494]">{label}</p>
+              <p className="mb-1 text-[1.75rem] font-semibold text-accent-purple">{value}</p>
+              <p className="text-sm text-theme-text-secondary">{label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="how-it-works" className="bg-[#0F1117] px-4 py-12 sm:px-6 sm:py-20">
+      <section id="how-it-works" className="bg-theme-bg px-4 py-12 sm:px-6 sm:py-20 transition-colors">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-3 text-center text-2xl font-semibold text-[#E2E4EB]">How RecruitAI Works</h2>
-          <p className="mb-12 text-center text-sm text-[#7E8494]">
+          <h2 className="mb-3 text-center text-2xl font-semibold text-theme-text">How RecruitAI Works</h2>
+          <p className="mb-12 text-center text-sm text-theme-text-secondary">
             From job posting to ranked results — fully automated, end-to-end.
           </p>
 
           <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-px bg-[#7C6AEF]/30 lg:block" />
+            <div className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-px bg-accent-purple/30 lg:block" />
 
             {steps.map(({ icon: Icon, step, title, desc }) => (
               <div key={step} className="relative flex flex-col items-center text-center">
-                <div className="relative z-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#7C6AEF] bg-[#171921] shadow-[0_2px_8px_rgba(124,106,239,0.15)]">
-                  <Icon size={22} className="text-[#7C6AEF]" />
-                  <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#7C6AEF] text-xs font-bold text-white">
+                <div className="relative z-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent-purple bg-theme-card shadow-[0_2px_8px_rgba(124,106,239,0.15)] transition-colors">
+                  <Icon size={22} className="text-accent-purple" />
+                  <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent-purple text-xs font-bold text-white">
                     {step}
                   </div>
                 </div>
-                <h3 className="mb-2 text-[0.9375rem] font-semibold text-[#E2E4EB]">{title}</h3>
-                <p className="text-sm leading-relaxed text-[#7E8494]">{desc}</p>
+                <h3 className="mb-2 text-[0.9375rem] font-semibold text-theme-text">{title}</h3>
+                <p className="text-sm leading-relaxed text-theme-text-secondary">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <footer className="bg-[#0B0D13] py-6 text-center">
-        <p className="text-sm text-gray-400">© 2026 RecruitAI, Inc. All rights reserved.</p>
+      <footer className="bg-theme-elevated py-6 text-center transition-colors border-t border-theme-border">
+        <p className="text-sm text-theme-text-secondary">&copy; 2026 RecruitAI, Inc. All rights reserved.</p>
       </footer>
     </div>
   )
