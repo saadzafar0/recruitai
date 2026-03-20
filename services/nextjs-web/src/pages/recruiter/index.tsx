@@ -107,7 +107,7 @@ export default function RecruiterDashboard() {
                 <div>
                   <p className="text-xs mb-1 text-text-secondary">{label}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-text-primary leading-none">
-                    {jobsLoading && active ? '...' : value}
+                    {jobsLoading && active && jobs.length === 0 ? '...' : value}
                   </p>
                 </div>
                 <div className="w-9 h-9 rounded flex items-center justify-center bg-theme-elevated">
@@ -136,7 +136,7 @@ export default function RecruiterDashboard() {
             </Link>
           </div>
 
-          {jobsLoading ? (
+          {jobsLoading && recentActivity.length === 0 ? (
             <div className="p-8 text-center">
               <div className="w-8 h-8 mx-auto rounded-full border-2 border-accent-purple border-t-transparent animate-spin" />
               <p className="text-sm text-text-secondary mt-3">Loading...</p>

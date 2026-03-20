@@ -7,6 +7,9 @@ import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import type { Organization, OrganizationCreate, OrganizationUpdate } from '@/types/organization'
 
+let organizationCache: Organization | null = null
+let hasOrganizationCache = false
+
 export interface UseOrganizationReturn {
   organization: Organization | null
   loading: boolean
@@ -20,8 +23,8 @@ export interface UseOrganizationReturn {
 
 export function useOrganization(): UseOrganizationReturn {
   const { session } = useAuth()
-  const [organization, setOrganization] = useState<Organization | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [organization, setOrganization] = useState<Organization | null>(hasOrganizationCache ? organizationCache : null)
+  const [loading, setLoading] = useState(!hasOrganizationCache)
   const [error, setError] = useState<string | null>(null)
 
   const getAuthHeaders = useCallback(() => {
@@ -35,7 +38,7 @@ export function useOrganization(): UseOrganizationReturn {
   }, [session])
 
   const fetchOrganization = useCallback(async () => {
-    setLoading(true)
+    setLoading(!hasOrganizationCache)
     setError(null)
 
     try {
@@ -50,6 +53,8 @@ export function useOrganization(): UseOrganizationReturn {
 
       const data = await response.json()
       setOrganization(data)
+      organizationCache = data
+      hasOrganizationCache = true
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch organization'
       setError(message)
@@ -75,6 +80,8 @@ export function useOrganization(): UseOrganizationReturn {
 
       const newOrg: Organization = await response.json()
       setOrganization(newOrg)
+      organizationCache = newOrg
+      hasOrganizationCache = true
       return newOrg
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create organization'
@@ -105,6 +112,8 @@ export function useOrganization(): UseOrganizationReturn {
 
       const updatedOrg: Organization = await response.json()
       setOrganization(updatedOrg)
+      organizationCache = updatedOrg
+      hasOrganizationCache = true
       return updatedOrg
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update organization'
@@ -133,6 +142,8 @@ export function useOrganization(): UseOrganizationReturn {
       }
 
       setOrganization(null)
+      organizationCache = null
+      hasOrganizationCache = true
       return true
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete organization'

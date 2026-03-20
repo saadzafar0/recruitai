@@ -53,14 +53,45 @@ export interface UseJobsReturn {
   refreshJobs: () => Promise<void>
 }
 
+interface JobsCacheEntry {
+  jobs: JobPosting[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+const jobsCache = new Map<string, JobsCacheEntry>()
+
+function buildJobsCacheKey(options?: UseJobsOptions): string {
+  return JSON.stringify({
+    page: options?.page ?? 1,
+    limit: options?.limit ?? 10,
+    filters: {
+      search: options?.filters?.search ?? '',
+      status: options?.filters?.status ?? '',
+      employment_type: options?.filters?.employment_type ?? '',
+      work_mode: options?.filters?.work_mode ?? '',
+      created_after: options?.filters?.created_after ?? '',
+      created_before: options?.filters?.created_before ?? '',
+    },
+    sort: {
+      field: options?.sort?.field ?? '',
+      direction: options?.sort?.direction ?? '',
+    },
+  })
+}
+
 export function useJobs(initialOptions?: UseJobsOptions): UseJobsReturn {
   const { session } = useAuth()
-  const [jobs, setJobs] = useState<JobPosting[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(initialOptions?.page || 1)
-  const [limit, setLimit] = useState(initialOptions?.limit || 10)
-  const [totalPages, setTotalPages] = useState(0)
-  const [loading, setLoading] = useState(false)
+  const initialCacheKey = buildJobsCacheKey(initialOptions)
+  const initialCached = jobsCache.get(initialCacheKey)
+  const [jobs, setJobs] = useState<JobPosting[]>(initialCached?.jobs || [])
+  const [total, setTotal] = useState(initialCached?.total || 0)
+  const [page, setPage] = useState(initialCached?.page || initialOptions?.page || 1)
+  const [limit, setLimit] = useState(initialCached?.limit || initialOptions?.limit || 10)
+  const [totalPages, setTotalPages] = useState(initialCached?.totalPages || 0)
+  const [loading, setLoading] = useState(!initialCached)
   const [error, setError] = useState<string | null>(null)
   const [currentOptions, setCurrentOptions] = useState<UseJobsOptions>(initialOptions || {})
 
@@ -75,10 +106,12 @@ export function useJobs(initialOptions?: UseJobsOptions): UseJobsReturn {
   }, [session])
 
   const fetchJobs = useCallback(async (options?: UseJobsOptions) => {
-    setLoading(true)
-    setError(null)
-
     const opts = { ...currentOptions, ...options }
+    const cacheKey = buildJobsCacheKey(opts)
+    const cachedEntry = jobsCache.get(cacheKey)
+
+    setLoading(!cachedEntry)
+    setError(null)
     setCurrentOptions(opts)
 
     try {
@@ -112,6 +145,14 @@ export function useJobs(initialOptions?: UseJobsOptions): UseJobsReturn {
       setPage(data.page)
       setLimit(data.limit)
       setTotalPages(data.totalPages)
+
+      jobsCache.set(cacheKey, {
+        jobs: data.jobs,
+        total: data.total,
+        page: data.page,
+        limit: data.limit,
+        totalPages: data.totalPages,
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch jobs'
       setError(message)

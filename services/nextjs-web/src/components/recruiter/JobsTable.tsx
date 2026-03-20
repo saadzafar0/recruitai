@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { ChevronUp, ChevronDown, Trash2, MoreVertical } from 'lucide-react'
 import { JobStatusBadge } from './JobStatusBadge'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import type { JobPosting, JobStatus } from '@/types/job'
 
 export type SortField = 'title' | 'status' | 'created_at' | 'application_deadline'
@@ -18,7 +19,7 @@ interface JobsTableProps {
   onSort: (field: SortField) => void
   onRowClick: (job: JobPosting) => void
   onStatusChange: (id: string, status: JobStatus) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string) => void | Promise<void>
   loading?: boolean
 }
 
@@ -49,6 +50,8 @@ export function JobsTable({
   loading,
 }: JobsTableProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<JobPosting | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const handleSort = (field: SortField) => {
     onSort(field)
@@ -83,7 +86,19 @@ export function JobsTable({
     return formatDate(dateStr)
   }
 
-  if (loading) {
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+
+    try {
+      setDeleteLoading(true)
+      await onDelete(deleteTarget.id)
+      setDeleteTarget(null)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  if (loading && jobs.length === 0) {
     return (
       <div className="rounded-lg border bg-theme-card border-theme-border">
         <div className="p-12 text-center">
@@ -190,9 +205,7 @@ export function JobsTable({
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (confirm('Are you sure you want to delete this job posting?')) {
-                        onDelete(job.id)
-                      }
+                      setDeleteTarget(job)
                     }}
                     className="p-2 rounded text-text-secondary hover:text-accent-red hover:bg-accent-red/10 transition-colors cursor-pointer"
                     title="Delete job"
@@ -205,6 +218,21 @@ export function JobsTable({
           </tbody>
         </table>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        action="delete"
+        entity="job posting"
+        title="Delete Job Posting"
+        message={deleteTarget ? `Are you sure you want to delete \"${deleteTarget.title}\"?` : undefined}
+        confirmLabel="Delete"
+        loading={deleteLoading}
+        destructive
+        onClose={() => {
+          if (!deleteLoading) setDeleteTarget(null)
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }
@@ -240,7 +268,22 @@ export function JobsTableMobile({
   onDelete,
   loading,
 }: Omit<JobsTableProps, 'sortField' | 'sortDirection' | 'onSort'>) {
-  if (loading) {
+  const [deleteTarget, setDeleteTarget] = useState<JobPosting | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+
+    try {
+      setDeleteLoading(true)
+      await onDelete(deleteTarget.id)
+      setDeleteTarget(null)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  if (loading && jobs.length === 0) {
     return (
       <div className="p-8 text-center">
         <div className="w-8 h-8 mx-auto rounded-full border-2 border-accent-purple border-t-transparent animate-spin" />
@@ -293,9 +336,7 @@ export function JobsTableMobile({
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                if (confirm('Delete this job posting?')) {
-                  onDelete(job.id)
-                }
+                setDeleteTarget(job)
               }}
               className="p-1.5 rounded text-text-secondary hover:text-accent-red transition-colors cursor-pointer"
             >
@@ -304,6 +345,21 @@ export function JobsTableMobile({
           </div>
         </div>
       ))}
+
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        action="delete"
+        entity="job posting"
+        title="Delete Job Posting"
+        message={deleteTarget ? `Are you sure you want to delete \"${deleteTarget.title}\"?` : undefined}
+        confirmLabel="Delete"
+        loading={deleteLoading}
+        destructive
+        onClose={() => {
+          if (!deleteLoading) setDeleteTarget(null)
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }
