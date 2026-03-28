@@ -54,12 +54,17 @@ export function RecruiterSidebar({
 }: RecruiterSidebarProps) {
   const router = useRouter()
   const { user, signOut } = useAuth()
-  const { showSuccess } = useToast()
+  const { showSuccess, showError } = useToast()
 
   const handleSignOut = async () => {
-    await signOut()
-    showSuccess('Signed out successfully')
-    router.push('/')
+    try {
+      await signOut()
+      showSuccess('Signed out successfully')
+    } catch {
+      showError('Could not complete server sign out, but your local session was cleared.')
+    } finally {
+      await router.replace('/login')
+    }
   }
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -190,6 +195,7 @@ export function RecruiterSidebar({
                 )}
 
                 <button
+                  type="button"
                   onClick={handleSignOut}
                   className={`
                     text-text-secondary hover:text-accent-red transition-colors cursor-pointer

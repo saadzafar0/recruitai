@@ -15,7 +15,7 @@ import { MockInterviewCard } from '@/components/mock-interview'
 export default function UserPage() {
   const router = useRouter()
   const { user, loading, signOut } = useAuth()
-  const { showSuccess } = useToast()
+  const { showSuccess, showError } = useToast()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,9 +27,14 @@ export default function UserPage() {
   }, [loading, user, router])
 
   const handleSignOut = async () => {
-    await signOut()
-    showSuccess('Signed out successfully')
-    router.push('/')
+    try {
+      await signOut()
+      showSuccess('Signed out successfully')
+    } catch {
+      showError('Could not complete server sign out, but your local session was cleared.')
+    } finally {
+      await router.replace('/login')
+    }
   }
 
   if (loading) {
