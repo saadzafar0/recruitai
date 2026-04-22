@@ -46,7 +46,7 @@ export default async function handler(
     if (!isValidCVType(fileType)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid file type. Allowed: PDF, DOC, DOCX',
+        error: 'Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG, JPEG',
       })
     }
 

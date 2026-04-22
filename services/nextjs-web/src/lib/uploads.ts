@@ -18,7 +18,7 @@ export async function uploadCV(file: File): Promise<UploadCVResult> {
     if (!isValidCVType(file.type)) {
       return {
         success: false,
-        error: 'Invalid file type. Allowed: PDF, DOC, DOCX',
+        error: 'Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG, JPEG',
       }
     }
 

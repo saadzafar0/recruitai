@@ -121,6 +121,8 @@ export function isValidCVType(mimeType: string): boolean {
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/png',
+    'image/jpeg',
   ]
   return allowedTypes.includes(mimeType)
 }
@@ -133,6 +135,8 @@ export function getFileExtension(mimeType: string): string {
     'application/pdf': '.pdf',
     'application/msword': '.doc',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
   }
   return extensions[mimeType] || ''
 }
