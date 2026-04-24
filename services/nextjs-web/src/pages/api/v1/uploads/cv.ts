@@ -14,7 +14,7 @@ type UploadResponse = {
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb', // Limit file size to 10MB
+      sizeLimit: '14mb', // 10MB file + ~33% base64 overhead
     },
   },
 }
