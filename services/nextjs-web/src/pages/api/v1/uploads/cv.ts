@@ -14,7 +14,7 @@ type UploadResponse = {
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb', // Limit file size to 10MB
+      sizeLimit: '14mb', // 10MB file + ~33% base64 overhead
     },
   },
 }
@@ -46,7 +46,7 @@ export default async function handler(
     if (!isValidCVType(fileType)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid file type. Allowed: PDF, DOC, DOCX',
+        error: 'Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG, JPEG',
       })
     }
 

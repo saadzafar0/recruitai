@@ -37,3 +37,5 @@ coverage/
 *.local
 .cache/
 docs/deployment.txt
+docs/ENV_TEMPLATE_FOR_TEAM.md
+docs/HAMZA_SPRINT2_TASKS.md
