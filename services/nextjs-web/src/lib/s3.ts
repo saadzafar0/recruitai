@@ -117,24 +117,65 @@ export async function deleteFile(key: string): Promise<boolean> {
  * Validate file type for CV uploads
  */
 export function isValidCVType(mimeType: string): boolean {
+  const normalizedMimeType = mimeType.toLowerCase()
   const allowedTypes = [
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp',
+    'image/bmp',
+    'image/tiff',
+    'image/tif',
   ]
-  return allowedTypes.includes(mimeType)
+  return allowedTypes.includes(normalizedMimeType)
 }
 
 /**
  * Get file extension from mime type
  */
 export function getFileExtension(mimeType: string): string {
+  const normalizedMimeType = mimeType.toLowerCase()
   const extensions: Record<string, string> = {
     'application/pdf': '.pdf',
     'application/msword': '.doc',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/jpg': '.jpg',
+    'image/webp': '.webp',
+    'image/bmp': '.bmp',
+    'image/tiff': '.tiff',
+    'image/tif': '.tif',
   }
-  return extensions[mimeType] || ''
+  return extensions[normalizedMimeType] || ''
+}
+
+/**
+ * Infer mime type from file extension when browser does not provide file.type.
+ */
+export function getMimeTypeFromFileName(fileName: string): string {
+  const normalizedFileName = fileName.toLowerCase()
+
+  const extensionToMimeType: Record<string, string> = {
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.tiff': 'image/tiff',
+    '.tif': 'image/tiff',
+  }
+
+  const matchingExtension = Object.keys(extensionToMimeType)
+    .find((extension) => normalizedFileName.endsWith(extension))
+
+  return matchingExtension ? extensionToMimeType[matchingExtension] : ''
 }
 
 export { s3Client, BUCKET_NAME }

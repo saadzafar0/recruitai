@@ -3,7 +3,6 @@ import IORedis, { type RedisOptions } from 'ioredis'
 import {
 	parseCandidateCvWithLlm,
 	type CvParserProvider,
-	InvalidLlmResponseError,
 } from '../services/geminiParser'
 import {
 	downloadCvFromS3,
@@ -11,7 +10,6 @@ import {
 } from '../services/s3Downloader'
 import {
 	extractRawCvText,
-	TextExtractionError,
 	UnsupportedDocumentTypeError,
 } from '../services/textExtractor'
 import { updateCandidateProfileFromCvParse } from '../services/candidateProfileUpdater'
@@ -110,14 +108,18 @@ async function processCvJob(job: Job<CvProcessingJobData>): Promise<CvProcessing
 			extractedSkillsCount: parseResult.parsed.topTechnicalSkills.length,
 		}
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+
 		if (
 			error instanceof InvalidS3LocationError ||
-			error instanceof UnsupportedDocumentTypeError ||
-			error instanceof TextExtractionError ||
-			error instanceof InvalidLlmResponseError
+			error instanceof UnsupportedDocumentTypeError
 		) {
-			throw new UnrecoverableError(error.message)
+			throw new UnrecoverableError(errorMessage)
 		}
+
+		console.warn(
+			`[cv-parser-worker] Retryable error for job ${job.id || 'unknown'}: ${errorMessage}`,
+		)
 
 		throw error
 	}
@@ -135,6 +137,7 @@ export const cvParserWorker = new Worker<CvProcessingJobData, CvProcessingJobRes
 	{
 		connection: workerConnection,
 		concurrency,
+		maxStalledCount: 3,
 	},
 )
 
@@ -149,9 +152,19 @@ cvParserWorker.on('completed', (job: Job<CvProcessingJobData>, result: CvProcess
 })
 
 cvParserWorker.on('failed', (job: Job<CvProcessingJobData> | undefined, error: Error) => {
+	const attemptsMade = job?.attemptsMade || 0
+	const maxAttempts = job?.opts?.attempts || 1
+	const isFinalFailure = attemptsMade >= maxAttempts
+
 	console.error(
-		`[cv-parser-worker] Job ${job?.id || 'unknown'} failed on attempt ${job?.attemptsMade || 0}: ${error.message}`,
+		`[cv-parser-worker] Job ${job?.id || 'unknown'} failed on attempt ${attemptsMade}/${maxAttempts}: ${error.message}`,
 	)
+
+	if (isFinalFailure) {
+		console.error(
+			`[cv-parser-worker] Job ${job?.id || 'unknown'} exhausted all retry attempts and is now permanently failed.`,
+		)
+	}
 })
 
 cvParserWorker.on('error', (error: Error) => {

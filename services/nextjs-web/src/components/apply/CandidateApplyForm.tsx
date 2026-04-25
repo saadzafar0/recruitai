@@ -485,12 +485,12 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
 
             <div className="rounded-lg border p-4 bg-theme-input border-theme-border">
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Upload CV (PDF, DOC, DOCX — max 10MB)
+                Upload CV (PDF, DOC, DOCX, PNG, JPG/JPEG, WEBP, BMP, TIFF — max 10MB)
               </label>
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.tif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
                   onChange={(e) => setCvFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:text-white file:bg-accent-purple hover:file:bg-accent-purple-hover file:cursor-pointer cursor-pointer"
                 />

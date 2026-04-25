@@ -274,13 +274,13 @@ export default async function handler(
           },
           {
             jobId: `cv-parse-${application.id}`,
-            attempts: 5,
+            attempts: 7,
             backoff: {
               type: 'exponential',
               delay: 3000,
             },
             removeOnComplete: 1000,
-            removeOnFail: 1000,
+            removeOnFail: 5000,
           },
         )
 

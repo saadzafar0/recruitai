@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { uploadFile, isValidCVType, getFileExtension } from '../../../../lib/s3'
+import { uploadFile, isValidCVType, getFileExtension, getMimeTypeFromFileName } from '../../../../lib/s3'
 
 type UploadResponse = {
   success: boolean
@@ -35,18 +35,20 @@ export default async function handler(
     const { file, fileName, fileType } = req.body
 
     // Validate required fields
-    if (!file || !fileName || !fileType) {
+    if (!file || !fileName) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: file, fileName, fileType',
+        error: 'Missing required fields: file, fileName',
       })
     }
 
+    const resolvedFileType = fileType || getMimeTypeFromFileName(fileName)
+
     // Validate file type
-    if (!isValidCVType(fileType)) {
+    if (!isValidCVType(resolvedFileType)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid file type. Allowed: PDF, DOC, DOCX',
+        error: 'Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG/JPEG, WEBP, BMP, TIFF',
       })
     }
 
@@ -63,7 +65,7 @@ export default async function handler(
     }
 
     // Ensure proper file extension
-    const extension = getFileExtension(fileType)
+    const extension = getFileExtension(resolvedFileType)
     const finalFileName = fileName.endsWith(extension)
       ? fileName
       : `${fileName}${extension}`
@@ -71,7 +73,7 @@ export default async function handler(
     // Upload to S3
     const result = await uploadFile({
       fileName: finalFileName,
-      fileType,
+      fileType: resolvedFileType,
       fileBuffer,
       folder: 'cvs',
     })

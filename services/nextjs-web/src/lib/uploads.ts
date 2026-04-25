@@ -1,4 +1,4 @@
-import { isValidCVType } from './s3'
+import { getMimeTypeFromFileName, isValidCVType } from './s3'
 
 interface UploadCVResult {
   success: boolean
@@ -37,11 +37,13 @@ function fileToBase64(file: File): Promise<string> {
  */
 export async function uploadCV(file: File): Promise<UploadCVResult> {
   try {
+    const resolvedFileType = file.type || getMimeTypeFromFileName(file.name)
+
     // Validate file type
-    if (!isValidCVType(file.type)) {
+    if (!isValidCVType(resolvedFileType)) {
       return {
         success: false,
-        error: 'Invalid file type. Allowed: PDF, DOC, DOCX',
+        error: 'Invalid file type. Allowed: PDF, DOC, DOCX, PNG, JPG/JPEG, WEBP, BMP, TIFF',
       }
     }
 
@@ -66,7 +68,7 @@ export async function uploadCV(file: File): Promise<UploadCVResult> {
       body: JSON.stringify({
         file: base64,
         fileName: file.name,
-        fileType: file.type,
+        fileType: resolvedFileType,
       }),
     })
 
