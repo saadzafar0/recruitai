@@ -4,10 +4,18 @@ import IORedis, { type RedisOptions } from 'ioredis'
 export const CV_PROCESSING_QUEUE_NAME = 'cv-processing'
 export const CODE_SUBMISSIONS_QUEUE_NAME = 'code-submissions'
 
+export interface SubmissionJobPayload {
+	application_id: string
+	code: string
+	language: string
+	test_cases?: unknown
+	time_limit?: number
+}
+
 type BullResources = {
 	connection: IORedis
 	cvProcessingQueue: Queue
-	codeSubmissionsQueue: Queue
+	codeSubmissionsQueue: Queue<SubmissionJobPayload>
 }
 
 type GlobalWithBullResources = typeof globalThis & {
@@ -53,7 +61,7 @@ function createBullResources(): BullResources {
 	return {
 		connection,
 		cvProcessingQueue: new Queue(CV_PROCESSING_QUEUE_NAME, { connection }),
-		codeSubmissionsQueue: new Queue(CODE_SUBMISSIONS_QUEUE_NAME, { connection }),
+		codeSubmissionsQueue: new Queue<SubmissionJobPayload>(CODE_SUBMISSIONS_QUEUE_NAME, { connection }),
 	}
 }
 
@@ -70,3 +78,10 @@ export const redisConnection = bullResources.connection
 export const cvProcessingQueue = bullResources.cvProcessingQueue
 export const codeSubmissionsQueue = bullResources.codeSubmissionsQueue
 
+export async function addSubmissionJob(payload: SubmissionJobPayload): Promise<string> {
+	const job = await codeSubmissionsQueue.add('submission', payload, {
+		attempts: 3,
+		backoff: { type: 'exponential', delay: 1000 },
+	})
+	return job.id!
+}
