@@ -10,6 +10,7 @@ export interface ApplicationRequest {
   cover_letter?: string
   cv_file_url?: string
   cv_file_name?: string
+  cv_file_key?: string
 }
 
 export interface ApplicationResponse {
@@ -28,6 +29,7 @@ export async function submitApplication(payload: ApplicationRequest): Promise<Ap
     job_id: payload.job_id,
     email: payload.email,
     hasCvFileUrl: Boolean(payload.cv_file_url),
+    hasCvFileKey: Boolean(payload.cv_file_key),
   })
 
   const response = await fetch('/api/v1/applications', {

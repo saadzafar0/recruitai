@@ -161,6 +161,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
     try {
       let cvFileUrl: string | undefined
       let cvFileName: string | undefined
+      let cvFileKey: string | undefined
 
       if (cvFile) {
         console.info('[ApplyForm] Uploading CV', {
@@ -187,6 +188,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         })
         cvFileUrl = uploadResult.url
         cvFileName = uploadResult.fileName
+        cvFileKey = uploadResult.key
       }
 
       console.info('[ApplyForm] Submitting application payload', {
@@ -194,6 +196,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         email: form.email.trim(),
         hasCoverLetter: Boolean(form.coverLetter.trim()),
         hasCvFileUrl: Boolean(cvFileUrl),
+        hasCvFileKey: Boolean(cvFileKey),
       })
 
       const result = await submitApplication({
@@ -208,6 +211,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         cover_letter: form.coverLetter.trim() || undefined,
         cv_file_url: cvFileUrl,
         cv_file_name: cvFileName,
+        cv_file_key: cvFileKey,
       })
 
       if (!result.success || !result.data) {
@@ -481,12 +485,12 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
 
             <div className="rounded-lg border p-4 bg-theme-input border-theme-border">
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Upload CV (PDF, DOC, DOCX — max 10MB)
+                Upload CV (PDF, DOC, DOCX, PNG, JPG/JPEG, WEBP, BMP, TIFF — max 10MB)
               </label>
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.tif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
                   onChange={(e) => setCvFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:text-white file:bg-accent-purple hover:file:bg-accent-purple-hover file:cursor-pointer cursor-pointer"
                 />

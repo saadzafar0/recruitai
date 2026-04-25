@@ -1,0 +1,75 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://recruitai.dev/schemas/cv-parsed.v1.json",
+	"title": "RecruitAI CV Parsed v1",
+	"description": "Contract for cv-processing queue jobs and normalized parser output.",
+	"type": "object",
+	"properties": {
+		"job": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["candidateProfileId", "cvFileUrl"],
+			"properties": {
+				"candidateProfileId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"applicantId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"applicationId": {
+					"type": "string",
+					"format": "uuid"
+				},
+				"cvFileUrl": {
+					"type": "string",
+					"format": "uri"
+				},
+				"cvFileName": {
+					"type": "string"
+				},
+				"s3Key": {
+					"type": "string"
+				},
+				"providerHint": {
+					"type": "string",
+					"enum": ["gemini", "grok"]
+				}
+			}
+		},
+		"parsed": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["name", "email", "topTechnicalSkills", "summary", "providerUsed"],
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1
+				},
+				"email": {
+					"type": "string",
+					"format": "email"
+				},
+				"topTechnicalSkills": {
+					"type": "array",
+					"maxItems": 5,
+					"items": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"summary": {
+					"type": "string",
+					"minLength": 1
+				},
+				"providerUsed": {
+					"type": "string",
+					"enum": ["gemini", "grok"]
+				}
+			}
+		}
+	},
+	"required": ["job", "parsed"],
+	"additionalProperties": false
+}
