@@ -1,3 +1,4 @@
+import './config/loadEnv'
 import { cvParserWorker, shutdownCvParserWorker } from './jobs/parseCV'
 
 console.info('[cv-parser-worker] Booting worker process...')
