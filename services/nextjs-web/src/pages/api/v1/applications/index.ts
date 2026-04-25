@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { cvProcessingQueue } from '../../../../lib/bull'
 import { z } from 'zod'
 
 // Validation schema for application submission
@@ -22,6 +23,7 @@ const ApplicationSchema = z.object({
   // CV file URL (if already uploaded)
   cv_file_url: z.string().url().optional(),
   cv_file_name: z.string().optional(),
+  cv_file_key: z.string().min(1).optional(),
 })
 
 type ApplicationData = z.infer<typeof ApplicationSchema>
@@ -72,6 +74,8 @@ export default async function handler(
       bodyKeys: Object.keys((body || {}) as Record<string, unknown>),
       job_id: body?.job_id,
       email: body?.email,
+      hasCvFileUrl: Boolean(body?.cv_file_url),
+      hasCvFileKey: Boolean(body?.cv_file_key),
     })
     const validatedData = ApplicationSchema.parse(body)
 
@@ -204,18 +208,93 @@ export default async function handler(
       })
     }
 
-    // 6. Create candidate profile (CV data placeholder)
+    // 6. Upsert candidate profile CV metadata and enqueue CV parsing job
     if (validatedData.cv_file_url) {
-      const { error: candidateProfileError } = await supabaseAdmin
+      const { data: existingCandidateProfile, error: existingCandidateProfileError } = await supabaseAdmin
         .from('candidate_profiles')
-        .insert({
-          applicant_id: profileId,
-          cv_file_url: validatedData.cv_file_url,
-          cv_file_name: validatedData.cv_file_name || null,
-        })
+        .select('id')
+        .eq('applicant_id', profileId)
+        .maybeSingle()
 
-      if (candidateProfileError) {
-        console.error('[API /api/v1/applications] Failed to save candidate profile CV data', candidateProfileError)
+      if (existingCandidateProfileError) {
+        console.error(
+          '[API /api/v1/applications] Failed to fetch existing candidate profile',
+          existingCandidateProfileError,
+        )
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to prepare candidate profile for CV parsing',
+          details: existingCandidateProfileError,
+        })
+      }
+
+      const candidateProfilePayload = {
+        applicant_id: profileId,
+        cv_file_url: validatedData.cv_file_url,
+        cv_file_name: validatedData.cv_file_name || null,
+      }
+
+      const candidateProfileMutation = existingCandidateProfile
+        ? supabaseAdmin
+            .from('candidate_profiles')
+            .update(candidateProfilePayload)
+            .eq('id', existingCandidateProfile.id)
+            .select('id')
+            .single()
+        : supabaseAdmin
+            .from('candidate_profiles')
+            .insert(candidateProfilePayload)
+            .select('id')
+            .single()
+
+      const { data: candidateProfile, error: candidateProfileError } = await candidateProfileMutation
+
+      if (candidateProfileError || !candidateProfile) {
+        console.error(
+          '[API /api/v1/applications] Failed to save candidate profile CV data',
+          candidateProfileError,
+        )
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to save candidate profile CV data',
+          details: candidateProfileError,
+        })
+      }
+
+      try {
+        await cvProcessingQueue.add(
+          'parse-cv',
+          {
+            candidateProfileId: candidateProfile.id,
+            applicantId: profileId,
+            applicationId: application.id,
+            cvFileUrl: validatedData.cv_file_url,
+            cvFileName: validatedData.cv_file_name,
+            s3Key: validatedData.cv_file_key,
+          },
+          {
+            jobId: `cv-parse-${application.id}`,
+            attempts: 5,
+            backoff: {
+              type: 'exponential',
+              delay: 3000,
+            },
+            removeOnComplete: 1000,
+            removeOnFail: 1000,
+          },
+        )
+
+        console.info('[API /api/v1/applications] CV parse job queued', {
+          applicationId: application.id,
+          candidateProfileId: candidateProfile.id,
+        })
+      } catch (queueError) {
+        // Do not block application creation if queue is temporarily unavailable.
+        console.error('[API /api/v1/applications] Failed to enqueue cv-processing job', {
+          queueError,
+          applicationId: application.id,
+          candidateProfileId: candidateProfile.id,
+        })
       }
     }
 

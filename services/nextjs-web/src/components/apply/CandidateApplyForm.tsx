@@ -161,6 +161,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
     try {
       let cvFileUrl: string | undefined
       let cvFileName: string | undefined
+      let cvFileKey: string | undefined
 
       if (cvFile) {
         console.info('[ApplyForm] Uploading CV', {
@@ -187,6 +188,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         })
         cvFileUrl = uploadResult.url
         cvFileName = uploadResult.fileName
+        cvFileKey = uploadResult.key
       }
 
       console.info('[ApplyForm] Submitting application payload', {
@@ -194,6 +196,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         email: form.email.trim(),
         hasCoverLetter: Boolean(form.coverLetter.trim()),
         hasCvFileUrl: Boolean(cvFileUrl),
+        hasCvFileKey: Boolean(cvFileKey),
       })
 
       const result = await submitApplication({
@@ -208,6 +211,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         cover_letter: form.coverLetter.trim() || undefined,
         cv_file_url: cvFileUrl,
         cv_file_name: cvFileName,
+        cv_file_key: cvFileKey,
       })
 
       if (!result.success || !result.data) {
