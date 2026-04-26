@@ -14,6 +14,10 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Build-time: Next collects page data; createClient in src/lib/supabase.ts needs these.
+# Real values are injected at runtime in EKS (not baked into the image).
+ENV NEXT_PUBLIC_SUPABASE_URL="https://dummy.supabase.co"
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY="dummy-key"
 RUN pnpm build
 
 FROM base AS runner
