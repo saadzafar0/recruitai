@@ -1,0 +1,262 @@
+# recruitai - cv-parser-worker (BullMQ consumer for cv-processing queue)
+#
+# Image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-cv-parser-worker:TAG
+# Replace REPLACE_DOCKERHUB_NAMESPACE and tag, or use kustomize/helm.
+#
+# Namespace: recruitai (idempotent; safe to re-apply with nextjs-web.yaml)
+# imagePullSecrets: add in Pod spec for private Hub — see nextjs-web.yaml header.
+#
+# Env: aligned with services/cv-parser-worker/.env.example
+# Scale replicas and CV_PARSER_CONCURRENCY together—each pod runs a BullMQ consumer process.
+# Executor / nextjs workers are separate; executor BullMQ is not in this set.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: recruitai
+  labels:
+    app.kubernetes.io/part-of: recruitai
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recruitai-cv-parser-config
+  namespace: recruitai
+  labels:
+    app: recruitai-cv-parser-worker
+    app.kubernetes.io/name: recruitai-cv-parser-worker
+    app.kubernetes.io/component: cv-parser
+    app.kubernetes.io/part-of: recruitai
+data:
+  AWS_REGION: "ap-southeast-1"
+  S3_BUCKET_NAME: "recruitai-cvs"
+  SUPABASE_URL: "https://YOUR_PROJECT_REF.supabase.co"
+  CV_PARSER_CONCURRENCY: "2"
+  CV_PARSER_VERSION: "1"
+  CV_PARSER_TIMEOUT_MS: "30000"
+  CV_PARSER_PROVIDER: "gemini"
+  CV_PARSER_FALLBACK_PROVIDER: "grok"
+  CV_PARSER_DISABLE_FALLBACK: "false"
+  CV_PARSER_MAX_TEXT_CHARS: "20000"
+  GEMINI_MODEL: "gemini-1.5-flash"
+  GROK_MODEL: "grok-2-latest"
+  REDIS_TLS: "false"
+  # If not using REDIS_URL, set host/port via Secret or add keys below
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_HOST: "your-redis-host"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: recruitai-cv-parser-secrets
+  namespace: recruitai
+  labels:
+    app: recruitai-cv-parser-worker
+    app.kubernetes.io/part-of: recruitai
+type: Opaque
+stringData:
+  REDIS_URL: "redis://:CHANGE_ME@your-redis-host:6379/0"
+  # Optional if REDIS_URL is set; otherwise the app uses REDIS_HOST/PORT from env (ConfigMap) + optional password
+  REDIS_PASSWORD: "CHANGE_ME"
+  SUPABASE_SERVICE_ROLE_KEY: "CHANGE_ME"
+  AWS_ACCESS_KEY_ID: "CHANGE_ME"
+  AWS_SECRET_ACCESS_KEY: "CHANGE_ME"
+  GEMINI_API_KEY: "CHANGE_ME"
+  GROK_API_KEY: "CHANGE_ME"
+  XAI_API_KEY: "CHANGE_ME"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cv-parser-worker
+  namespace: recruitai
+  labels:
+    app: recruitai-cv-parser-worker
+    app.kubernetes.io/name: recruitai-cv-parser-worker
+    app.kubernetes.io/component: cv-parser
+    app.kubernetes.io/part-of: recruitai
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: recruitai-cv-parser-worker
+  template:
+    metadata:
+      labels:
+        app: recruitai-cv-parser-worker
+        app.kubernetes.io/name: recruitai-cv-parser-worker
+    spec:
+      containers:
+        - name: cv-parser
+          image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-cv-parser-worker:latest
+          imagePullPolicy: IfNotPresent
+          # Named port for headless Service endpoint slices (app does not listen on this port)
+          ports:
+            - name: app
+              containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: REDIS_URL
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: REDIS_PORT
+            - name: REDIS_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: REDIS_DB
+            - name: REDIS_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: REDIS_TLS
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: REDIS_PASSWORD
+            - name: SUPABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: SUPABASE_URL
+            - name: SUPABASE_SERVICE_ROLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: SUPABASE_SERVICE_ROLE_KEY
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: AWS_REGION
+            - name: S3_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: S3_BUCKET_NAME
+            - name: CV_PARSER_CONCURRENCY
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_CONCURRENCY
+            - name: CV_PARSER_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_VERSION
+            - name: CV_PARSER_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_TIMEOUT_MS
+            - name: CV_PARSER_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_PROVIDER
+            - name: CV_PARSER_FALLBACK_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_FALLBACK_PROVIDER
+            - name: CV_PARSER_DISABLE_FALLBACK
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_DISABLE_FALLBACK
+            - name: CV_PARSER_MAX_TEXT_CHARS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: CV_PARSER_MAX_TEXT_CHARS
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: GEMINI_API_KEY
+            - name: GEMINI_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: GEMINI_MODEL
+            - name: GROK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: GROK_API_KEY
+            - name: GROK_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-cv-parser-config
+                  key: GROK_MODEL
+            - name: XAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-cv-parser-secrets
+                  key: XAI_API_KEY
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test -d /app/dist
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cv-parser-worker
+  namespace: recruitai
+  labels:
+    app: recruitai-cv-parser-worker
+    app.kubernetes.io/name: recruitai-cv-parser-worker
+    app.kubernetes.io/part-of: recruitai
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: false
+  selector:
+    app: recruitai-cv-parser-worker
+  ports:
+    - name: app
+      port: 80
+      targetPort: app
+      protocol: TCP

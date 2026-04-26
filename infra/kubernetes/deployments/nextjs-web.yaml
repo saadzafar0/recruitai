@@ -1,0 +1,221 @@
+# recruitai - nextjs-web
+#
+# Image: must match GitHub Actions -> Docker Hub (../.github/workflows/deploy-eks.yml)
+#   docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-nextjs-web:TAG
+# Replace REPLACE_DOCKERHUB_NAMESPACE and image tag before apply, or use kustomize/helm.
+#
+# Namespace: recruitai (idempotent; safe to re-apply)
+# imagePullSecrets: "regcred" - create for private Docker Hub:
+#   kubectl create secret docker-registry regcred --namespace recruitai \
+#     --docker-server=docker.io --docker-username=YOUR_HUB_USER --docker-password=YOUR_HUB_TOKEN
+# Omit imagePullSecrets if the registry is public.
+#
+# ConfigMap/Secret: replace CHANGE_ME with real values or manage secrets via External Secrets / Sealed Secrets.
+# NOTE: NEXT_PUBLIC_* are baked in at "next build" in CI; to change them you need a new image, not just Config.
+#
+# Executor worker is intentionally not deployed in this set.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: recruitai
+  labels:
+    app.kubernetes.io/part-of: recruitai
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recruitai-nextjs-config
+  namespace: recruitai
+  labels:
+    app: recruitai-nextjs-web
+    app.kubernetes.io/name: recruitai-nextjs-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: recruitai
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  AWS_REGION: "ap-southeast-1"
+  S3_BUCKET_NAME: "recruitai-cvs"
+  # Public client-side (ideally set at build time; override only if you rebuild the image to match)
+  NEXT_PUBLIC_SUPABASE_URL: "https://YOUR_PROJECT_REF.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "CHANGE_ME_NEXT_PUBLIC_ANON"
+  NEXT_PUBLIC_VAPI_ASSISTANT_ID: "CHANGE_ME"
+  NEXT_PUBLIC_VAPI_PUBLIC_KEY: "CHANGE_ME"
+  JUDGE0_URL: ""
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: recruitai-nextjs-secrets
+  namespace: recruitai
+  labels:
+    app: recruitai-nextjs-web
+    app.kubernetes.io/name: recruitai-nextjs-web
+    app.kubernetes.io/part-of: recruitai
+type: Opaque
+stringData:
+  SUPABASE_SERVICE_ROLE_KEY: "CHANGE_ME"
+  AWS_ACCESS_KEY_ID: "CHANGE_ME"
+  AWS_SECRET_ACCESS_KEY: "CHANGE_ME"
+  # Redis for BullMQ (api routes using lib/bull.ts)
+  REDIS_URL: "redis://:CHANGE_ME@your-redis-host:6379/0"
+  JUDGE0_API_TOKEN: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-web
+  namespace: recruitai
+  labels:
+    app: recruitai-nextjs-web
+    app.kubernetes.io/name: recruitai-nextjs-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: recruitai
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: recruitai-nextjs-web
+  template:
+    metadata:
+      labels:
+        app: recruitai-nextjs-web
+        app.kubernetes.io/name: recruitai-nextjs-web
+    spec:
+      # If images are private on Docker Hub, add:
+      # imagePullSecrets: [{ name: regcred }]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nextjs
+          image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-nextjs-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: PORT
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: AWS_REGION
+            - name: S3_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: S3_BUCKET_NAME
+            - name: NEXT_PUBLIC_SUPABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: NEXT_PUBLIC_SUPABASE_URL
+            - name: NEXT_PUBLIC_SUPABASE_ANON_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+            - name: NEXT_PUBLIC_VAPI_ASSISTANT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: NEXT_PUBLIC_VAPI_ASSISTANT_ID
+            - name: NEXT_PUBLIC_VAPI_PUBLIC_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: NEXT_PUBLIC_VAPI_PUBLIC_KEY
+            - name: JUDGE0_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-nextjs-config
+                  key: JUDGE0_URL
+            - name: SUPABASE_SERVICE_ROLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-nextjs-secrets
+                  key: SUPABASE_SERVICE_ROLE_KEY
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-nextjs-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-nextjs-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-nextjs-secrets
+                  key: REDIS_URL
+            - name: JUDGE0_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-nextjs-secrets
+                  key: JUDGE0_API_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-web
+  namespace: recruitai
+  labels:
+    app: recruitai-nextjs-web
+    app.kubernetes.io/name: recruitai-nextjs-web
+    app.kubernetes.io/part-of: recruitai
+spec:
+  type: ClusterIP
+  selector:
+    app: recruitai-nextjs-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

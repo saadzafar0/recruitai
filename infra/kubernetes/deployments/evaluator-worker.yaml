@@ -1,0 +1,149 @@
+# recruitai - evaluator-worker (BullMQ consumer, queue system-design-evaluation by default)
+#
+# Image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-evaluator-worker:TAG
+# Replace REPLACE_DOCKERHUB_NAMESPACE and tag, or use kustomize/helm.
+#
+# Namespace: recruitai (idempotent; safe to re-apply)
+# imagePullSecrets: add in Pod spec for private Hub — see nextjs-web.yaml header.
+#
+# This deployment does not include the code-submissions executor; add separately when you ship that service.
+# Scale replicas to increase parallel system-design job consumers; coordinate with EVALUATOR_CONCURRENCY if you add it.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: recruitai
+  labels:
+    app.kubernetes.io/part-of: recruitai
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recruitai-evaluator-config
+  namespace: recruitai
+  labels:
+    app: recruitai-evaluator-worker
+    app.kubernetes.io/name: recruitai-evaluator-worker
+    app.kubernetes.io/component: evaluator
+    app.kubernetes.io/part-of: recruitai
+data:
+  REDIS_PORT: "6379"
+  REDIS_TLS: "false"
+  REDIS_HOST: "your-redis-host"
+  EVALUATOR_QUEUE_NAME: "system-design-evaluation"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: recruitai-evaluator-secrets
+  namespace: recruitai
+  labels:
+    app: recruitai-evaluator-worker
+    app.kubernetes.io/part-of: recruitai
+type: Opaque
+stringData:
+  REDIS_URL: "redis://:CHANGE_ME@your-redis-host:6379/0"
+  REDIS_PASSWORD: "CHANGE_ME"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evaluator-worker
+  namespace: recruitai
+  labels:
+    app: recruitai-evaluator-worker
+    app.kubernetes.io/name: recruitai-evaluator-worker
+    app.kubernetes.io/component: evaluator
+    app.kubernetes.io/part-of: recruitai
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: recruitai-evaluator-worker
+  template:
+    metadata:
+      labels:
+        app: recruitai-evaluator-worker
+        app.kubernetes.io/name: recruitai-evaluator-worker
+    spec:
+      containers:
+        - name: evaluator
+          image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-evaluator-worker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: app
+              containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-evaluator-secrets
+                  key: REDIS_URL
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-evaluator-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-evaluator-config
+                  key: REDIS_PORT
+            - name: REDIS_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-evaluator-config
+                  key: REDIS_TLS
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-evaluator-secrets
+                  key: REDIS_PASSWORD
+            - name: EVALUATOR_QUEUE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-evaluator-config
+                  key: EVALUATOR_QUEUE_NAME
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test -d /app/dist
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evaluator-worker
+  namespace: recruitai
+  labels:
+    app: recruitai-evaluator-worker
+    app.kubernetes.io/name: recruitai-evaluator-worker
+    app.kubernetes.io/part-of: recruitai
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: recruitai-evaluator-worker
+  ports:
+    - name: app
+      port: 80
+      targetPort: app
+      protocol: TCP
