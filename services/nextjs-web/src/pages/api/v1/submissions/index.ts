@@ -32,6 +32,13 @@ export default async function handler(
     })
   }
 
+  if (!supabaseAdmin) {
+    return res.status(500).json({
+      success: false,
+      error: 'Server is not configured with SUPABASE_SERVICE_ROLE_KEY',
+    })
+  }
+
   try {
     const validatedData = SubmissionSchema.parse(req.body)
 
