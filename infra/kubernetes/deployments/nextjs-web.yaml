@@ -5,10 +5,7 @@
 # Replace REPLACE_DOCKERHUB_NAMESPACE and image tag before apply, or use kustomize/helm.
 #
 # Namespace: recruitai (idempotent; safe to re-apply)
-# imagePullSecrets: "regcred" - create for private Docker Hub:
-#   kubectl create secret docker-registry regcred --namespace recruitai \
-#     --docker-server=docker.io --docker-username=YOUR_HUB_USER --docker-password=YOUR_HUB_TOKEN
-# Omit imagePullSecrets if the registry is public.
+# Public Docker Hub images: no imagePullSecrets required.
 #
 # ConfigMap/Secret: replace CHANGE_ME with real values or manage secrets via External Secrets / Sealed Secrets.
 # NOTE: NEXT_PUBLIC_* are baked in at "next build" in CI; to change them you need a new image, not just Config.
@@ -84,8 +81,6 @@ spec:
         app: recruitai-nextjs-web
         app.kubernetes.io/name: recruitai-nextjs-web
     spec:
-      # If images are private on Docker Hub, add:
-      # imagePullSecrets: [{ name: regcred }]
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001

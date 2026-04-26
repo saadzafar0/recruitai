@@ -23,7 +23,7 @@
 
 | Assignee | Tasks |
 |----------|-------|
-| **Saad Zafar** *(Vapi Backend & K8s)* | • Write the Kubernetes deployment and service manifests for all 4 microservices and create the `regcred` secret for Docker Hub.<br>• **Vapi:** Build the `api/v1/webhooks/vapi.ts` endpoint. This secure webhook will receive the call-end payload from Vapi, extract the conversation transcript, and save it directly to the correct candidate's Supabase record. |
+| **Saad Zafar** *(Vapi Backend & K8s)* | • Write the Kubernetes deployment and service manifests for all 4 microservices and use public Docker Hub images (no `imagePullSecrets` required) or a pull secret for private registries.<br>• **Vapi:** Build the `api/v1/webhooks/vapi.ts` endpoint. This secure webhook will receive the call-end payload from Vapi, extract the conversation transcript, and save it directly to the correct candidate's Supabase record. |
 | **Bilal Kashif** *(Vapi Frontend)* | • **Vapi:** Integrate the `@vapi-ai/web` SDK. Build the VapiInterviewRoom UI component, handle browser microphone permissions, and implement the start/stop call logic. |
 | **Mohammad Hamza Iqbal** | • Write the Google Apps Script and the Next.js webhook (`api/v1/intake/google-form.ts`) to automatically create a candidate profile in Supabase when an application is submitted. |
 | **Muhammad Qatada** *(Vapi AI & CV Parsing)* | • **Vapi:** Design and configure the Vapi Assistant's system prompt to act as an expert technical interviewer (setting the tone, questions, and fallback behaviors).<br>• Build the cv-parser-worker logic: pull the PDF from S3, extract text, and use Gemini to parse skills/education into structured JSON. |

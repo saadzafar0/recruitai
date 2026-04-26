@@ -4,7 +4,7 @@
 # Replace REPLACE_DOCKERHUB_NAMESPACE and tag, or use kustomize/helm.
 #
 # Namespace: recruitai (idempotent; safe to re-apply with nextjs-web.yaml)
-# imagePullSecrets: add in Pod spec for private Hub — see nextjs-web.yaml header.
+# Public Docker Hub images: no imagePullSecrets required.
 #
 # Env: aligned with services/cv-parser-worker/.env.example
 # Scale replicas and CV_PARSER_CONCURRENCY together—each pod runs a BullMQ consumer process.

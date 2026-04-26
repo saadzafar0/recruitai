@@ -4,7 +4,7 @@
 # Replace REPLACE_DOCKERHUB_NAMESPACE and tag, or use kustomize/helm.
 #
 # Namespace: recruitai (idempotent; safe to re-apply)
-# imagePullSecrets: add in Pod spec for private Hub — see nextjs-web.yaml header.
+# Public Docker Hub images: no imagePullSecrets required.
 #
 # This deployment does not include the code-submissions executor; add separately when you ship that service.
 # Scale replicas to increase parallel system-design job consumers; coordinate with EVALUATOR_CONCURRENCY if you add it.
