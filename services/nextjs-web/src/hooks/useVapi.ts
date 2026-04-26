@@ -58,7 +58,7 @@ export interface UseVapiReturn {
   currentTranscript: string
   error: string | null
   volumeLevel: number
-  startCall: () => Promise<void>
+  startCall: (applicationId?: string) => Promise<void>
   endCall: () => void
   toggleMute: () => void
   isMuted: boolean
@@ -212,7 +212,7 @@ export function useVapi(): UseVapiReturn {
   }, [setStatusSafe])
 
   // Start a call with the configured assistant
-  const startCall = useCallback(async () => {
+  const startCall = useCallback(async (applicationId?: string) => {
     const vapi = vapiRef.current
     if (!vapi) {
       setError('VAPI not initialized')
@@ -225,13 +225,18 @@ export function useVapi(): UseVapiReturn {
       return
     }
 
+    const trimmed = applicationId?.trim()
+    const assistantOverrides = trimmed
+      ? { variableValues: { applicationId: trimmed } }
+      : undefined
+
     try {
       sessionEndedRef.current = false
       setStatusSafe('connecting')
       setError(null)
       setTranscripts([])
       setCurrentTranscript('')
-      await vapi.start(assistantId)
+      await vapi.start(assistantId, assistantOverrides)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start call'
       setError(errorMessage)

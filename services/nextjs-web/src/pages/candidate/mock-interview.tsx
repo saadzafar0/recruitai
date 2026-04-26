@@ -3,7 +3,7 @@
  * Full-screen interview experience with VAPI integration
  */
 
-import { useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -31,6 +31,12 @@ function shouldDisplayInterviewError(error: string | null): boolean {
 
 export default function MockInterviewPage() {
   const router = useRouter()
+  const applicationId = useMemo(() => {
+    const q = router.query.applicationId
+    if (typeof q === 'string' && q.trim()) return q.trim()
+    if (Array.isArray(q) && q[0]?.trim()) return q[0].trim()
+    return undefined
+  }, [router.query.applicationId])
   const { user, loading } = useAuth()
   const {
     status,
@@ -45,6 +51,10 @@ export default function MockInterviewPage() {
     toggleMute,
     isMuted,
   } = useVapi()
+
+  const handleStartCall = useCallback(() => {
+    void startCall(applicationId)
+  }, [applicationId, startCall])
 
   // Redirect if not logged in or not a candidate
   useEffect(() => {
@@ -152,7 +162,7 @@ export default function MockInterviewPage() {
           isMuted={isMuted}
           onEndCall={endCall}
           onToggleMute={toggleMute}
-          onStartCall={startCall}
+          onStartCall={handleStartCall}
         />
 
         {/* Tips */}
@@ -211,7 +221,7 @@ export default function MockInterviewPage() {
             isMuted={isMuted}
             onEndCall={endCall}
             onToggleMute={toggleMute}
-            onStartCall={startCall}
+            onStartCall={handleStartCall}
           />
         </div>
       </div>
