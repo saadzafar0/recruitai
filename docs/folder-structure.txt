@@ -67,7 +67,7 @@ recruitai/
 │       │   ├── evaluator-worker.yaml       # Points to Docker Hub image
 │       │   └── cv-parser-worker.yaml       # Points to Docker Hub image
 │       ├── secrets/
-│       │   └── regcred.yaml                # Docker Hub authentication
+│       │   └── (optional) pull Secret yaml if using private registries
 │       ├── services/
 │       │   └── web-service.yaml
 │       └── ingress/

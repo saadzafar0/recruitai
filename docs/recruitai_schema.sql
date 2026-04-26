@@ -397,6 +397,8 @@ CREATE TABLE interview_sessions (
   invite_sent_at      TIMESTAMPTZ,
   reminder_sent_at    TIMESTAMPTZ,
   device_info         JSONB DEFAULT '{}',      -- browser, OS, mic quality
+  full_transcript     TEXT,                    -- full Vapi end-of-call transcript (webhook)
+  vapi_call_id        TEXT,                    -- Vapi Call.id for idempotent webhook apply
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
@@ -979,6 +981,9 @@ CREATE INDEX idx_candidate_skills_trgm   ON candidate_skills
 -- Interview sessions
 CREATE INDEX idx_interview_sessions_app  ON interview_sessions(application_id);
 CREATE INDEX idx_interview_sessions_tok  ON interview_sessions(session_token);
+CREATE UNIQUE INDEX interview_sessions_vapi_call_id_unique
+  ON interview_sessions (vapi_call_id)
+  WHERE vapi_call_id IS NOT NULL;
 
 -- Coding assessments
 CREATE INDEX idx_coding_assessments_app  ON coding_assessments(application_id);

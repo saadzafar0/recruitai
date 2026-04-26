@@ -1,43 +1,45 @@
-# 🏃 RecruitAI Sprint Plan
+Here is the updated Markdown with the `regcred` task removed:
+
+## 🏃 Sprint 2 — Microservices, Vapi & CV Pipeline
+
+**Saad Zafar:**
+* Set up GitHub Actions CI/CD (`deploy-eks.yml`) — build all 4 Docker images and push to Docker Hub
+* Write all 4 Kubernetes deployment + service manifests (`nextjs-web.yaml`, `executor-worker.yaml`, `evaluator-worker.yaml`, `cv-parser-worker.yaml`)
+* Create Kubernetes secrets for all environment variables (Supabase, Vapi, Gemini, Judge0 keys)
+* Build the `api/v1/webhooks/vapi.ts` endpoint — receive the Vapi call-end payload, extract the transcript, and save it to the correct candidate record in Supabase
+
+**Bilal Kashif:**
+* Build the `VapiInterviewRoom` component using the `@vapi-ai/web` SDK — handle microphone permissions and start/stop call logic
+* Build the `interview/[id].tsx` page with three sections: Voice Interview, Coding Round, and System Design — this is the main candidate-facing interview page
+
+**Mohammad Hamza Iqbal:**
+* Wire the S3 upload utility into the candidate apply flow so CV PDFs are uploaded to S3 on form submission
+* Build the `api/v1/submissions` route — receives code submissions from the frontend and pushes a job onto the BullMQ queue
+
+**Muhammad Qatada:**
+* Refine and finalize the Vapi assistant system prompt — technical interviewer persona, dynamic question flow, and fallback behaviors
+* Set up BullMQ connection logic (`lib/bull.ts`) and configure Redis so queues are ready to accept jobs
+* Build the `cv-parser-worker` — pull PDF from S3, extract text, send to Gemini, parse into structured JSON, save result to Supabase
 
 ---
 
-## Sprint 1 — Foundation & Infrastructure  
-**Week 1**
+## 🏃 Sprint 3 — Execution, Grading & Live Traffic
 
-> **Goal:** Scaffold the monorepo, provision the cloud resources, and establish the local development environment.
+**Saad Zafar:**
+* Configure the EKS Ingress Controller and AWS ALB to route public internet traffic to the Next.js service
+* Build the `executor-worker` — pull a code job from the BullMQ queue, send it to the Judge0 API, receive the result, and update Supabase with pass/fail and test output
+* Build the `api/v1/webhooks/judge0.ts` endpoint — receives async execution results back from Judge0 and updates the submission record in Supabase
 
-| Assignee | Tasks |
-|----------|-------|
-| **Saad Zafar** | • Set up the GitHub Actions workflow (`deploy-eks.yml`) to build the 4 Docker images and push them to Docker Hub.<br>• Provision the base AWS EKS cluster and node groups. |
-| **Bilal Kashif** | • Initialize the Next.js application inside the monorepo.<br>• Build the base UI layouts, navigation, and the Recruiter Dashboard skeleton. |
-| **Mohammad Hamza Iqbal** | • Set up the Supabase project, establishing database schemas for Candidates, Interviews, and Code Submissions.<br>• Configure the AWS S3 bucket and write the Next.js API utility function for secure file uploads. |
-| **Muhammad Qatada** | • Write the `docker-compose.yml` to spin up Next.js, Redis, and empty shells for the background workers locally.<br>• Initialize the BullMQ connection logic (`lib/bull.ts`) so the queues are ready to accept jobs. |
+**Bilal Kashif:**
+* Embed Monaco Editor inside the coding section of `interview/[id].tsx` and wire the submit button to post to `api/v1/submissions`
+* Build the System Design submission UI inside `interview/[id].tsx` — a text area for architecture explanation plus a submit button
+* Build out the Recruiter Dashboard page to display candidate rankings, parsed CV data, and per-section scores
 
----
+**Mohammad Hamza Iqbal:**
+* Write the aggregated scoring algorithm — once CV parsing, voice interview grading, and code execution are all complete for a candidate, calculate the final weighted score and update their rank in Supabase
+* Perform end-to-end testing of the full candidate flow: apply → voice interview → coding round → system design → score appears on dashboard
+* Bug fixes across all API routes
 
-## Sprint 2 — The Vapi Split & Data Ingestion  
-**Week 2**
-
-> **Goal:** Integrate the core conversational AI, connect the Google Forms intake, and start parsing data.
-
-| Assignee | Tasks |
-|----------|-------|
-| **Saad Zafar** *(Vapi Backend & K8s)* | • Write the Kubernetes deployment and service manifests for all 4 microservices and create the `regcred` secret for Docker Hub.<br>• **Vapi:** Build the `api/v1/webhooks/vapi.ts` endpoint. This secure webhook will receive the call-end payload from Vapi, extract the conversation transcript, and save it directly to the correct candidate's Supabase record. |
-| **Bilal Kashif** *(Vapi Frontend)* | • **Vapi:** Integrate the `@vapi-ai/web` SDK. Build the VapiInterviewRoom UI component, handle browser microphone permissions, and implement the start/stop call logic. |
-| **Mohammad Hamza Iqbal** | • Write the Google Apps Script and the Next.js webhook (`api/v1/intake/google-form.ts`) to automatically create a candidate profile in Supabase when an application is submitted. |
-| **Muhammad Qatada** *(Vapi AI & CV Parsing)* | • **Vapi:** Design and configure the Vapi Assistant's system prompt to act as an expert technical interviewer (setting the tone, questions, and fallback behaviors).<br>• Build the cv-parser-worker logic: pull the PDF from S3, extract text, and use Gemini to parse skills/education into structured JSON. |
-
----
-
-## Sprint 3 — Evaluation, Execution & Polish  
-**Week 3**
-
-> **Goal:** Implement the coding execution environment, finalize AI grading, aggregate the scores, and route live traffic.
-
-| Assignee | Tasks |
-|----------|-------|
-| **Saad Zafar** | • Configure the EKS Ingress Controller and AWS Application Load Balancer (ALB) to route public internet traffic to the Next.js service.<br>• **Judge0:** Build the executor-worker logic. It will pull submitted code from Redis, send it to the Judge0 API to be compiled/run, and update Supabase with the pass/fail results. |
-| **Bilal Kashif** | • Build the CodeEditor UI component (using Monaco Editor) for the candidate's coding round.<br>• Flesh out the Recruiter Dashboard UI to display the live candidate rankings and parsed CV data. |
-| **Mohammad Hamza Iqbal** | • Write the "Aggregated Scoring" algorithm. Once the CV, Interview, and Code execution are done, calculate the final weighted score and update the candidate's overall rank in Supabase.<br>• Perform comprehensive end-to-end testing and bug fixing on the API routes. |
-| **Muhammad Qatada** | • Build the evaluator-worker. Pass the completed Vapi interview transcripts and system design answers to Gemini/Grok to grade the candidate's technical communication and architecture knowledge. |
+**Muhammad Qatada:**
+* Build the `evaluator-worker` — pull completed Vapi transcripts and system design answers from Supabase, send them to Gemini/Grok for grading, and write the structured score back to Supabase
+* Define and document the JSON output schema for the evaluator so Hamza's scoring algorithm can consume it without integration issues
