@@ -1,10 +1,12 @@
+'use client'
+
 /**
  * Mock Interview Page
  * Full-screen interview experience with VAPI integration
  */
 
 import { useCallback, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useVapi } from '@/hooks/useVapi'
@@ -29,14 +31,14 @@ function shouldDisplayInterviewError(error: string | null): boolean {
   )
 }
 
-export default function MockInterviewPage() {
+export default function MockInterviewClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const applicationId = useMemo(() => {
-    const q = router.query.applicationId
-    if (typeof q === 'string' && q.trim()) return q.trim()
-    if (Array.isArray(q) && q[0]?.trim()) return q[0].trim()
-    return undefined
-  }, [router.query.applicationId])
+    const q = searchParams?.get('applicationId')
+    return q && q.trim() ? q.trim() : undefined
+  }, [searchParams])
   const { user, loading } = useAuth()
   const {
     status,
@@ -56,7 +58,6 @@ export default function MockInterviewPage() {
     void startCall(applicationId)
   }, [applicationId, startCall])
 
-  // Redirect if not logged in or not a candidate
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
@@ -65,7 +66,6 @@ export default function MockInterviewPage() {
     }
   }, [loading, user, router])
 
-  // Handle back navigation
   const handleBack = () => {
     if (status === 'connected' || status === 'speaking' || status === 'listening') {
       endCall()
@@ -73,7 +73,6 @@ export default function MockInterviewPage() {
     router.push('/user')
   }
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-theme-bg transition-colors">
@@ -85,16 +84,13 @@ export default function MockInterviewPage() {
     )
   }
 
-  // Guard clause
   if (!user || user.role !== 'applicant') return null
 
-  // Determine the role of the current partial transcript
   const currentRole = isListening ? 'user' : (isSpeaking ? 'assistant' : undefined)
   const showError = shouldDisplayInterviewError(error)
 
   return (
     <div className="min-h-screen flex flex-col bg-theme-bg transition-colors">
-      {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-theme-border bg-theme-input transition-colors">
         <button
           onClick={handleBack}
@@ -114,9 +110,7 @@ export default function MockInterviewPage() {
         <ThemeToggleMobile />
       </header>
 
-      {/* Desktop Layout */}
       <div className="hidden sm:flex flex-1 flex-col items-center justify-center px-6 py-8 gap-8">
-        {/* Error message */}
         {showError && (
           <div className="w-full max-w-md flex items-start gap-3 px-4 py-3 rounded-lg border border-accent-red/30 bg-accent-red/10">
             <AlertCircle size={18} className="text-accent-red flex-shrink-0 mt-0.5" />
@@ -127,19 +121,15 @@ export default function MockInterviewPage() {
           </div>
         )}
 
-        {/* Avatar */}
         <InterviewAvatar
           isSpeaking={isSpeaking}
           isListening={isListening}
           volumeLevel={volumeLevel}
         />
 
-        {/* Instructions (shown when idle) */}
         {(status === 'idle' || status === 'ended') && (
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-text-primary mb-2">
-              Ready to practice?
-            </h2>
+            <h2 className="text-lg font-semibold text-text-primary mb-2">Ready to practice?</h2>
             <p className="text-sm text-text-secondary max-w-md">
               Click &quot;Start Interview&quot; to begin your mock interview session.
               The AI interviewer will ask you questions and provide feedback.
@@ -147,83 +137,54 @@ export default function MockInterviewPage() {
           </div>
         )}
 
-        {/* Transcript display (shown when connected) */}
-        {(status === 'connected' || status === 'speaking' || status === 'listening' || status === 'connecting') && (
-          <TranscriptDisplay
-            transcripts={transcripts}
-            currentTranscript={currentTranscript}
-            currentRole={currentRole}
-          />
-        )}
-
-        {/* Controls */}
-        <InterviewControls
-          status={status}
-          isMuted={isMuted}
-          onEndCall={endCall}
-          onToggleMute={toggleMute}
-          onStartCall={handleStartCall}
+        <TranscriptDisplay
+          transcripts={transcripts}
+          currentTranscript={currentTranscript}
+          currentRole={currentRole}
         />
 
-        {/* Tips */}
-        {(status === 'connected' || status === 'speaking' || status === 'listening') && (
-          <p className="text-xs text-text-secondary/60 text-center">
-            Speak clearly into your microphone. The AI will respond after you finish speaking.
-          </p>
-        )}
+        <InterviewControls
+          status={status}
+          onStartCall={handleStartCall}
+          onEndCall={endCall}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+        />
       </div>
 
-      {/* Mobile Layout */}
-      <div className="flex sm:hidden flex-1 flex-col px-4 py-6 gap-6">
-        {/* Error message */}
+      <div className="flex flex-col flex-1 sm:hidden">
         {showError && (
-          <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-accent-red/30 bg-accent-red/10">
-            <AlertCircle size={16} className="text-accent-red flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-accent-red/80">{error}</p>
+          <div className="px-4 pt-4">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-accent-red/30 bg-accent-red/10">
+              <AlertCircle size={18} className="text-accent-red flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-accent-red">Error</p>
+                <p className="text-xs text-accent-red/80">{error}</p>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Avatar - smaller on mobile */}
-        <div className="flex justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-6">
           <InterviewAvatar
             isSpeaking={isSpeaking}
             isListening={isListening}
             volumeLevel={volumeLevel}
           />
-        </div>
-
-        {/* Instructions (shown when idle) */}
-        {(status === 'idle' || status === 'ended') && (
-          <div className="text-center flex-1 flex flex-col justify-center">
-            <h2 className="text-base font-semibold text-text-primary mb-2">
-              Ready to practice?
-            </h2>
-            <p className="text-xs text-text-secondary px-4">
-              Tap &quot;Start&quot; to begin your mock interview. Speak clearly into your device.
-            </p>
-          </div>
-        )}
-
-        {/* Transcript display (shown when connected) */}
-        {(status === 'connected' || status === 'speaking' || status === 'listening' || status === 'connecting') && (
-          <div className="flex-1">
-            <TranscriptDisplayMobile
-              transcripts={transcripts}
-              currentTranscript={currentTranscript}
-            />
-          </div>
-        )}
-
-        {/* Controls - fixed at bottom on mobile */}
-        <div className="mt-auto pt-4 border-t border-theme-border">
-          <InterviewControlsMobile
-            status={status}
-            isMuted={isMuted}
-            onEndCall={endCall}
-            onToggleMute={toggleMute}
-            onStartCall={handleStartCall}
+          <TranscriptDisplayMobile
+            transcripts={transcripts}
+            currentTranscript={currentTranscript}
+            currentRole={currentRole}
           />
         </div>
+
+        <InterviewControlsMobile
+          status={status}
+          onStartCall={handleStartCall}
+          onEndCall={endCall}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+        />
       </div>
     </div>
   )

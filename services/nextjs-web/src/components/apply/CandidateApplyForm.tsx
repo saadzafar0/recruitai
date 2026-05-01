@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/navigation'
 import { Briefcase, FileText, Link2, Loader2, Mail, Phone, Upload, User } from 'lucide-react'
 import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 import { AuthError } from '@/components/auth'

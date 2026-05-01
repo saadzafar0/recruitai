@@ -21,6 +21,7 @@ interface JobsTableProps {
   onStatusChange: (id: string, status: JobStatus) => void
   onDelete: (id: string) => void | Promise<void>
   loading?: boolean
+  error?: string | null
 }
 
 interface ColumnDef {
@@ -48,6 +49,7 @@ export function JobsTable({
   onStatusChange,
   onDelete,
   loading,
+  error,
 }: JobsTableProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<JobPosting | null>(null)
@@ -104,6 +106,17 @@ export function JobsTable({
         <div className="p-12 text-center">
           <div className="w-8 h-8 mx-auto rounded-full border-2 border-accent-purple border-t-transparent animate-spin" />
           <p className="text-sm text-text-secondary mt-4">Loading jobs...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && jobs.length === 0) {
+    return (
+      <div className="rounded-lg border bg-theme-card border-theme-border">
+        <div className="p-10 text-center">
+          <p className="text-sm font-medium text-accent-red">Failed to load jobs</p>
+          <p className="text-xs text-accent-red/80 mt-2">{error}</p>
         </div>
       </div>
     )
@@ -267,6 +280,7 @@ export function JobsTableMobile({
   onStatusChange,
   onDelete,
   loading,
+  error,
 }: Omit<JobsTableProps, 'sortField' | 'sortDirection' | 'onSort'>) {
   const [deleteTarget, setDeleteTarget] = useState<JobPosting | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -288,6 +302,15 @@ export function JobsTableMobile({
       <div className="p-8 text-center">
         <div className="w-8 h-8 mx-auto rounded-full border-2 border-accent-purple border-t-transparent animate-spin" />
         <p className="text-sm text-text-secondary mt-3">Loading...</p>
+      </div>
+    )
+  }
+
+  if (error && jobs.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm font-medium text-accent-red">Failed to load jobs</p>
+        <p className="text-xs text-accent-red/80 mt-2">{error}</p>
       </div>
     )
   }

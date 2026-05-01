@@ -1,16 +1,11 @@
-/**
- * User Page
- * Landing page for authenticated users - redirects recruiters to their dashboard
- * or shows user dashboard for applicants
- */
+'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/router'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { AlertCircle, Bell, Camera, CheckCircle, Code2, Globe, Layout, LogOut, LucideIcon, Mic, Settings } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { ThemeToggle, ThemeToggleMobile } from '@/components/ui/theme-toggle'
-import { useState } from 'react'
 
 type UserTaskStatus = 'not_started' | 'in_progress' | 'completed'
 
@@ -24,7 +19,6 @@ export default function UserPage() {
     if (!loading && !user) {
       router.push('/login')
     } else if (!loading && user && user.role === 'recruiter') {
-      // Redirect recruiters to their dedicated dashboard
       router.push('/recruiter')
     }
   }, [loading, user, router])
@@ -36,7 +30,7 @@ export default function UserPage() {
     } catch {
       showError('Could not complete server sign out, but your local session was cleared.')
     } finally {
-      await router.replace('/login')
+      router.replace('/login')
     }
   }
 
@@ -51,7 +45,6 @@ export default function UserPage() {
     )
   }
 
-  // Don't render if not logged in or if recruiter (will redirect)
   if (!user || user.role === 'recruiter') return null
 
   const voiceStatus: UserTaskStatus = 'not_started'
@@ -60,7 +53,6 @@ export default function UserPage() {
 
   return (
     <div className="min-h-screen bg-theme-bg transition-colors">
-      {/* Header */}
       <header className="border-b bg-theme-input border-theme-border transition-colors">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -71,9 +63,7 @@ export default function UserPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Theme toggle - mobile version (visible on small screens) */}
             <ThemeToggleMobile className="sm:hidden" />
-            {/* Theme toggle - desktop version (hidden on small screens) */}
             <ThemeToggle className="hidden sm:flex" />
             <button className="p-2 rounded cursor-pointer text-text-secondary hover:text-accent-purple transition-colors">
               <Bell size={18} />
@@ -86,7 +76,6 @@ export default function UserPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <div className="mb-8">
           <h1 className="text-[1.5rem] font-semibold mb-1 text-text-primary">
@@ -97,7 +86,6 @@ export default function UserPage() {
           </p>
         </div>
 
-        {/* System Check */}
         <div className="rounded-lg p-5 border mb-8 bg-theme-card border-theme-border shadow-theme-card transition-colors">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[0.9375rem] font-semibold text-text-primary">System Check</h2>
@@ -116,147 +104,149 @@ export default function UserPage() {
           </div>
         </div>
 
-        {/* Assessment Panels */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <UserTaskPanel
-            icon={Mic}
+          <AssessmentCard
             title="Voice Interview"
-            duration="20 minutes"
+            icon={Mic}
             status={voiceStatus}
             disabled={!micAvailable}
-            disabledReason="Microphone access required."
-            onBegin={() => router.push('/interview/voice')}
+            disabledReason="Microphone not detected"
+            onClick={() => router.push('/interview/voice')}
           />
-          <UserTaskPanel
-            icon={Code2}
+          <AssessmentCard
             title="Coding Test"
-            duration="45 minutes"
+            icon={Code2}
             status={codingStatus}
-            onBegin={() => router.push('/interview/coding')}
+            onClick={() => router.push('/interview/coding')}
           />
-          <UserTaskPanel
-            icon={Layout}
+          <AssessmentCard
             title="System Design"
-            duration="30 minutes"
+            icon={Layout}
             status={designStatus}
-            onBegin={() => router.push('/interview/design')}
+            onClick={() => router.push('/interview/design')}
           />
         </div>
 
-        <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg border text-sm mb-8 border-theme-border bg-theme-card text-text-secondary">
-          <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-accent-purple" />
-          Your results will be reviewed by the recruiter within 48 hours. You will receive an email
-          notification once a decision has been made.
-        </div>
-
-        {/* Settings & Sign Out */}
-        <div className="flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 text-sm rounded border cursor-pointer border-theme-border text-text-secondary hover:bg-theme-card transition-colors">
-            <Settings size={14} />
-            Settings
-          </button>
-
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-4 py-2 text-sm rounded border cursor-pointer border-accent-red/20 text-accent-red hover:bg-accent-red/10 transition-colors"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
+        <div className="rounded-lg p-5 border bg-theme-card border-theme-border shadow-theme-card transition-colors">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-[0.9375rem] font-semibold text-text-primary mb-1">Account</h2>
+              <p className="text-sm text-text-secondary">Manage your session and settings.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded text-sm bg-theme-input border border-theme-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+              >
+                <Settings size={16} />
+                Settings
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded text-sm bg-accent-red/10 border border-accent-red/30 text-accent-red hover:bg-accent-red/15 transition-colors cursor-pointer"
+              >
+                <LogOut size={16} />
+                Sign out
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     </div>
   )
 }
 
-interface HardwareStatusProps {
+function HardwareStatus({
+  icon: Icon,
+  label,
+  ok,
+}: {
   icon: LucideIcon
   label: string
   ok: boolean
-}
-
-function HardwareStatus({ icon: Icon, label, ok }: HardwareStatusProps) {
+}) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-background border-theme-border">
-      <Icon size={15} className={ok ? 'text-accent-green' : 'text-accent-red'} />
-      <span className="text-sm text-text-secondary">{label}</span>
-      <span
-        className={`ml-auto text-xs px-2 py-0.5 rounded ${
-          ok ? 'text-accent-green bg-accent-green/10' : 'text-accent-red bg-accent-red/10'
-        }`}
-      >
-        {ok ? 'Ready' : 'Not Available'}
-      </span>
+    <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-theme-border bg-theme-input transition-colors">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded flex items-center justify-center bg-theme-elevated">
+          <Icon size={18} className="text-accent-purple" />
+        </div>
+        <span className="text-sm text-text-primary">{label}</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {ok ? (
+          <CheckCircle size={16} className="text-accent-green" />
+        ) : (
+          <AlertCircle size={16} className="text-accent-red" />
+        )}
+        <span className={`text-xs ${ok ? 'text-accent-green' : 'text-accent-red'}`}>
+          {ok ? 'OK' : 'Not available'}
+        </span>
+      </div>
     </div>
   )
 }
 
-interface UserTaskPanelProps {
-  icon: LucideIcon
+function AssessmentCard({
+  title,
+  icon: Icon,
+  status,
+  disabled,
+  disabledReason,
+  onClick,
+}: {
   title: string
-  duration: string
+  icon: LucideIcon
   status: UserTaskStatus
   disabled?: boolean
   disabledReason?: string
-  onBegin: () => void
-}
-
-function UserTaskPanel({ icon: Icon, title, duration, status, disabled, disabledReason, onBegin }: UserTaskPanelProps) {
-  const statusStyles: Record<UserTaskStatus, { label: string; badgeClass: string }> = {
+  onClick: () => void
+}) {
+  const config = {
     not_started: {
-      label: 'Not Started',
+      badge: 'Not started',
       badgeClass: 'bg-theme-input text-text-secondary',
+      buttonClass: 'bg-accent-purple text-white hover:bg-accent-purple-hover',
+      buttonLabel: 'Begin',
     },
     in_progress: {
-      label: 'In Progress',
-      badgeClass: 'bg-amber-500/15 text-amber-300',
+      badge: 'In progress',
+      badgeClass: 'bg-accent-yellow/10 text-accent-yellow',
+      buttonClass: 'bg-accent-purple text-white hover:bg-accent-purple-hover',
+      buttonLabel: 'Continue',
     },
     completed: {
-      label: 'Completed',
-      badgeClass: 'bg-accent-green/15 text-accent-green',
+      badge: 'Completed',
+      badgeClass: 'bg-accent-green/10 text-accent-green',
+      buttonClass: 'bg-theme-input text-text-secondary border border-theme-border',
+      buttonLabel: 'View',
     },
-  }
+  }[status]
 
   return (
-    <div className="rounded-lg p-6 border flex flex-col bg-theme-card border-theme-border shadow-theme-card transition-colors">
+    <div className="rounded-lg border bg-theme-card border-theme-border shadow-theme-card transition-colors p-5">
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded flex items-center justify-center bg-secondary">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary mb-1">{title}</h3>
+          <span className={`inline-flex text-xs px-2 py-0.5 rounded ${config.badgeClass}`}>
+            {disabled ? disabledReason || 'Disabled' : config.badge}
+          </span>
+        </div>
+        <div className="w-10 h-10 rounded flex items-center justify-center bg-theme-elevated">
           <Icon size={18} className="text-accent-purple" />
         </div>
-        {status === 'completed' ? (
-          <CheckCircle size={18} className="text-accent-green" />
-        ) : (
-          <span className={`text-xs px-2 py-1 rounded ${statusStyles[status].badgeClass}`}>
-            {statusStyles[status].label}
-          </span>
-        )}
       </div>
 
-      <h4 className="text-sm font-semibold mb-1 text-text-primary">{title}</h4>
-      <p className="text-xs mb-5 text-text-secondary">Est. {duration}</p>
-
-      {status === 'completed' ? (
-        <div className="mt-auto flex items-center gap-2 text-sm text-accent-green">
-          <CheckCircle size={14} />
-          Submitted
-        </div>
-      ) : (
-        <div className="mt-auto">
-          <button
-            onClick={onBegin}
-            disabled={disabled}
-            className="w-full py-2.5 text-sm text-white rounded transition-colors disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer bg-accent-purple hover:bg-accent-purple/90"
-          >
-            Begin
-          </button>
-          {disabled && disabledReason && (
-            <div className="mt-2 flex items-start gap-1.5 text-xs text-accent-red">
-              <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
-              {disabledReason}
-            </div>
-          )}
-        </div>
-      )}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={`w-full py-2.5 text-sm font-medium rounded transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${config.buttonClass}`}
+      >
+        {config.buttonLabel}
+      </button>
     </div>
   )
 }

@@ -1,5 +1,7 @@
+'use client'
+
 import { useState } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, User } from 'lucide-react'
 import { useAuth, UserRole } from '@/context/AuthContext'
@@ -65,7 +67,7 @@ export default function SignUp() {
       form.password,
       form.firstName,
       form.lastName,
-      form.role
+      form.role,
     )
 
     setLoading(false)
@@ -82,7 +84,6 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-theme-bg transition-colors relative">
-      {/* Theme toggle - positioned in top right corner */}
       <div className="absolute top-4 right-4">
         <ThemeToggleMobile />
       </div>

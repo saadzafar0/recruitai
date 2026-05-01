@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, ReactNode } from 'react'
-import { useRouter } from 'next/router'
+import { usePathname, useRouter } from 'next/navigation'
 import { Bell, Menu } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { RecruiterSidebar } from './RecruiterSidebar'
@@ -17,6 +17,7 @@ interface RecruiterLayoutProps {
 
 export function RecruiterLayout({ children, title }: RecruiterLayoutProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -33,7 +34,7 @@ export function RecruiterLayout({ children, title }: RecruiterLayoutProps) {
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false)
-  }, [router.pathname])
+  }, [pathname])
 
   // Load collapsed state from localStorage
   useEffect(() => {

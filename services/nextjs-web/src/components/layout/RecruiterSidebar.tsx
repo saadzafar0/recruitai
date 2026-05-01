@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Briefcase,
@@ -53,6 +53,7 @@ export function RecruiterSidebar({
   onClose,
 }: RecruiterSidebarProps) {
   const router = useRouter()
+  const pathname = usePathname() || ''
   const { user, signOut } = useAuth()
   const { showSuccess, showError } = useToast()
 
@@ -73,9 +74,9 @@ export function RecruiterSidebar({
 
   const isActiveRoute = (href: string) => {
     if (href === '/recruiter') {
-      return router.pathname === '/recruiter'
+      return pathname === '/recruiter'
     }
-    return router.pathname.startsWith(href)
+    return pathname.startsWith(href)
   }
 
   return (

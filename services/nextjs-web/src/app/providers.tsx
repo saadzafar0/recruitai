@@ -1,16 +1,18 @@
-import type { AppProps } from 'next/app'
-import '@/styles/globals.css'
+'use client'
+
 import { AuthProvider } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function Providers({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ToastProvider>
-          <Component {...pageProps} />
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   )

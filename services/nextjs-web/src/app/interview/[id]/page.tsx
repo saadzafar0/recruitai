@@ -1,13 +1,15 @@
+'use client'
+
 import { useMemo } from 'react'
-import { useRouter } from 'next/router'
+import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Code2, Layout, Mic } from 'lucide-react'
-import MockInterviewPage from '../candidate/mock-interview'
+import MockInterviewPage from '../../candidate/mock-interview/page'
 
 type InterviewKind = 'voice' | 'coding' | 'design' | 'unknown'
 
-function resolveInterviewKind(id: string | string[] | undefined): InterviewKind {
+function resolveInterviewKind(id: unknown): InterviewKind {
   const raw = Array.isArray(id) ? id[0] : id
-  const normalized = (raw || '').toLowerCase()
+  const normalized = typeof raw === 'string' ? raw.toLowerCase() : ''
 
   if (normalized === 'voice') return 'voice'
   if (normalized === 'coding') return 'coding'
@@ -17,8 +19,9 @@ function resolveInterviewKind(id: string | string[] | undefined): InterviewKind 
 
 export default function UserInterviewPage() {
   const router = useRouter()
+  const params = useParams<{ id?: string | string[] }>()
 
-  const interviewKind = useMemo(() => resolveInterviewKind(router.query.id), [router.query.id])
+  const interviewKind = useMemo(() => resolveInterviewKind(params?.id), [params])
 
   if (interviewKind === 'voice') {
     return <MockInterviewPage />

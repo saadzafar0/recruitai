@@ -1,5 +1,7 @@
+'use client'
+
 import { useState } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -50,7 +52,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-theme-bg transition-colors relative">
-      {/* Theme toggle - positioned in top right corner */}
       <div className="absolute top-4 right-4">
         <ThemeToggleMobile />
       </div>

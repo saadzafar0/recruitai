@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/router'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useVapi } from '@/hooks/useVapi'
@@ -32,12 +32,11 @@ function shouldDisplayInterviewError(error: string | null): boolean {
 
 export function VapiInterviewRoom({ backPath = '/user', badgeLabel = 'Mock Interview' }: VapiInterviewRoomProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const applicationId = useMemo(() => {
-    const q = router.query.applicationId
-    if (typeof q === 'string' && q.trim()) return q.trim()
-    if (Array.isArray(q) && q[0]?.trim()) return q[0].trim()
-    return undefined
-  }, [router.query.applicationId])
+    const q = searchParams?.get('applicationId')
+    return q && q.trim() ? q.trim() : undefined
+  }, [searchParams])
   const { user, loading } = useAuth()
   const {
     status,
