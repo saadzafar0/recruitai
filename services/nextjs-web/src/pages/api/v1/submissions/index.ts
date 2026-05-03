@@ -56,6 +56,14 @@ export default async function handler(
       })
     }
 
+    const blockedStatuses = ['draft', 'withdrawn', 'rejected']
+    if (blockedStatuses.includes(application.status)) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot submit code for application in '${application.status}' status`,
+      })
+    }
+
     // Push job to BullMQ queue
     const job_id = await addSubmissionJob(validatedData)
 

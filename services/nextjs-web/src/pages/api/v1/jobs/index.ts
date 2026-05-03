@@ -94,7 +94,7 @@ async function handleGet(
   let query = supabaseAdmin
     .from('job_postings')
     .select('*, job_skills(skill_name)', { count: 'exact' })
-    .eq('created_by', profile.id)
+    .eq('organization_id', profile.organization_id)
 
   // Apply filters
   if (search) {

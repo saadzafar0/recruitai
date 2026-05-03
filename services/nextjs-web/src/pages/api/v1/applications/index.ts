@@ -24,7 +24,13 @@ const ApplicationSchema = z.object({
   cv_file_url: z.string().url().optional(),
   cv_file_name: z.string().optional(),
   cv_file_key: z.string().min(1).optional(),
-})
+}).refine(
+  (data) => {
+    if (data.cv_file_url && !data.cv_file_key) return false
+    return true
+  },
+  { message: 'cv_file_key is required when cv_file_url is provided', path: ['cv_file_key'] },
+)
 
 type ApplicationData = z.infer<typeof ApplicationSchema>
 

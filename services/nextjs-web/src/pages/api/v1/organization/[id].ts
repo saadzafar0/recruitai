@@ -133,6 +133,19 @@ async function handleDelete(
     return res.status(500).json({ error: 'Server configuration error' })
   }
 
+  // Check for active (published) job postings before deleting
+  const { data: activeJobs } = await supabaseAdmin
+    .from('job_postings')
+    .select('id')
+    .eq('organization_id', id)
+    .eq('status', 'published')
+
+  if (activeJobs && activeJobs.length > 0) {
+    return res.status(409).json({
+      error: `Cannot delete organization with ${activeJobs.length} active job posting(s). Close or delete them first.`,
+    })
+  }
+
   // First, remove organization_id from all profiles that belong to this org
   await supabaseAdmin
     .from('profiles')

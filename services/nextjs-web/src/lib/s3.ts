@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -48,8 +49,9 @@ export async function uploadFile(options: FileUploadOptions): Promise<UploadResu
 
     await s3Client.send(command)
 
-    // Construct the URL
-    const url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'ap-southeast-1'}.amazonaws.com/${key}`
+    // Generate a presigned URL since objects are private
+    const getCommand = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+    const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 })
 
     return {
       success: true,
@@ -63,6 +65,14 @@ export async function uploadFile(options: FileUploadOptions): Promise<UploadResu
       error: error instanceof Error ? error.message : 'Upload failed',
     }
   }
+}
+
+/**
+ * Generate a presigned URL for a private S3 object
+ */
+export async function getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+  const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+  return getSignedUrl(s3Client, command, { expiresIn })
 }
 
 /**
