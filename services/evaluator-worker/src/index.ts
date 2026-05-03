@@ -1,81 +1,68 @@
 import './config/loadEnv'
-import { Worker } from 'bullmq'
-import IORedis, { type RedisOptions } from 'ioredis'
+import {
+	startVoiceEvaluationWorker,
+	VOICE_EVALUATION_QUEUE_NAME,
+} from './jobs/evaluateVoiceInterview'
+import {
+	startSystemDesignEvaluationWorker,
+	SYSTEM_DESIGN_QUEUE_NAME,
+} from './jobs/evaluateSystemDesign'
+import { startEvaluatorSweeper } from './services/sweeper'
 
-/**
- * System design / LLM evaluation queue (BullMQ consumer).
- * Placeholder: completes jobs with a no-op result until real scoring is implemented.
- * Queue name must match producers when they are added to nextjs-web.
- */
-export const SYSTEM_DESIGN_QUEUE_NAME =
-  process.env.EVALUATOR_QUEUE_NAME || 'system-design-evaluation'
+console.info('[evaluator-worker] Booting worker process...')
 
-function createRedisConnection(): IORedis {
-  const redisUrl =
-    process.env.REDIS_URL ||
-    process.env.REDIS_CONNECTION_STRING ||
-    process.env.REDIS_URI
+const voiceHandles = startVoiceEvaluationWorker()
+const designHandles = startSystemDesignEvaluationWorker()
+const sweeperHandles = startEvaluatorSweeper()
 
-  if (redisUrl) {
-    return new IORedis(redisUrl, {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-    })
-  }
+let isShuttingDown = false
 
-  const parsedPort = Number(process.env.REDIS_PORT || '6379')
-  const useTls = (process.env.REDIS_TLS || '').toLowerCase() === 'true'
-  const options: RedisOptions = {
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: Number.isFinite(parsedPort) ? parsedPort : 6379,
-    username: process.env.REDIS_USERNAME || undefined,
-    password: process.env.REDIS_PASSWORD || undefined,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    ...(useTls ? { tls: {} } : {}),
-  }
-  return new IORedis(options)
+async function handleShutdown(signal: NodeJS.Signals): Promise<void> {
+	if (isShuttingDown) return
+	isShuttingDown = true
+	console.info(`[evaluator-worker] Received ${signal}. Closing workers...`)
+
+	try {
+		await Promise.allSettled([
+			voiceHandles.close(),
+			designHandles.close(),
+			sweeperHandles.close(),
+		])
+		console.info('[evaluator-worker] Shutdown complete')
+		process.exit(0)
+	} catch (error) {
+		console.error('[evaluator-worker] Failed graceful shutdown', error)
+		process.exit(1)
+	}
 }
 
-const connection = createRedisConnection()
-
-export const evaluatorWorker = new Worker(
-  SYSTEM_DESIGN_QUEUE_NAME,
-  async (job) => {
-    console.info(
-      `[evaluator-worker] Received job ${job.id} (placeholder — implement LLM evaluation)`,
-    )
-    return { ok: true, placeholder: true, jobName: job.name }
-  },
-  { connection, concurrency: 1 },
-)
-
-evaluatorWorker.on('failed', (job, err) => {
-  console.error(
-    `[evaluator-worker] Job ${job?.id} failed: ${err?.message || err}`,
-  )
+process.on('SIGINT', () => {
+	void handleShutdown('SIGINT')
 })
 
-let shuttingDown = false
-async function shutdown(): Promise<void> {
-  if (shuttingDown) return
-  shuttingDown = true
-  await evaluatorWorker.close()
-  await connection.quit()
-  process.exit(0)
-}
+process.on('SIGTERM', () => {
+	void handleShutdown('SIGTERM')
+})
 
-process.on('SIGINT', () => void shutdown())
-process.on('SIGTERM', () => void shutdown())
+process.on('unhandledRejection', (reason) => {
+	console.error('[evaluator-worker] Unhandled rejection', reason)
+})
 
-void evaluatorWorker
-  .waitUntilReady()
-  .then(() => {
-    console.info(
-      `[evaluator-worker] Listening on queue "${SYSTEM_DESIGN_QUEUE_NAME}"`,
-    )
-  })
-  .catch((err) => {
-    console.error('[evaluator-worker] Failed to start', err)
-    process.exit(1)
-  })
+process.on('uncaughtException', (error) => {
+	console.error('[evaluator-worker] Uncaught exception', error)
+	void handleShutdown('SIGTERM')
+})
+
+void Promise.all([
+	voiceHandles.worker.waitUntilReady(),
+	designHandles.worker.waitUntilReady(),
+])
+	.then(() => {
+		console.info(
+			`[evaluator-worker] Listening on queues: "${VOICE_EVALUATION_QUEUE_NAME}", "${SYSTEM_DESIGN_QUEUE_NAME}"`,
+		)
+	})
+	.catch((error) => {
+		console.error('[evaluator-worker] Failed to initialize workers', error)
+		process.exit(1)
+	})
