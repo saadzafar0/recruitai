@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { voiceEvaluationQueue } from '../../../../lib/bull'
 import {
   readVapiRequestBody,
   verifyVapiWebhook,
@@ -177,6 +178,25 @@ export default async function handler(
       console.error('[Vapi webhook] insert interview_sessions', insErr)
       return res.status(500).json({ success: false, error: 'Failed to save transcript' })
     }
+  }
+
+  const savedSessionId = sessionRow?.id ?? null
+  try {
+    const jobId = `voice:${savedSessionId || applicationId}`
+    await voiceEvaluationQueue.add(
+      'voice-evaluation',
+      { applicationId, sessionId: savedSessionId ?? undefined },
+      {
+        jobId,
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 3000 },
+        removeOnComplete: { count: 200 },
+        removeOnFail: { count: 200 },
+      },
+    )
+  } catch (enqueueErr) {
+    // Non-fatal — sweeper will pick this up within EVALUATOR_SWEEPER_INTERVAL_MS
+    console.error('[Vapi webhook] Failed to enqueue voice evaluation job', enqueueErr)
   }
 
   return res.status(200).json({ success: true, action: 'saved', applicationId })
