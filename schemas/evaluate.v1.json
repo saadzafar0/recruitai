@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recruitai.dev/schemas/evaluate.v1.json",
+  "title": "RecruitAI Evaluator Output v1",
+  "description": "Contract for evaluator-worker outputs — covers Vapi voice-interview transcripts and system-design responses. Hamza's aggregated scoring algorithm consumes the `applications.voice_score` and `applications.system_design_score` columns (0-100) that the worker writes from these payloads.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/VoiceInterviewEvaluation" },
+    { "$ref": "#/$defs/SystemDesignEvaluation" }
+  ],
+  "$defs": {
+    "Recommendation": {
+      "type": "string",
+      "enum": ["strong_pass", "pass", "borderline", "fail"],
+      "description": "Hiring signal for the round. Mirrors voice_interview_scores.recommendation and system_design_scores.recommendation."
+    },
+    "DimensionScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Per-rubric-dimension score on a 0-10 scale (matches Supabase NUMERIC(4,2) columns)."
+    },
+    "TotalScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Round-level composite score on a 0-100 scale. Written to applications.voice_score / applications.system_design_score."
+    },
+    "ProviderUsed": {
+      "type": "string",
+      "enum": ["gemini", "grok"],
+      "description": "Which LLM produced the evaluation (matches the cv-parser-worker provider enum)."
+    },
+    "VoiceInterviewEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "applicationId", "sessionId", "scores", "totalScore", "summary", "strengths", "weaknesses", "recommendation", "providerUsed", "scoredAt"],
+      "properties": {
+        "kind": { "const": "voice_interview" },
+        "applicationId": { "type": "string", "format": "uuid" },
+        "sessionId": { "type": "string", "format": "uuid", "description": "interview_sessions.id" },
+        "vapiCallId": { "type": ["string", "null"], "description": "interview_sessions.vapi_call_id" },
+        "transcriptHash": { "type": "string", "description": "SHA-256 of the transcript that was scored — lets the aggregator detect re-scores." },
+        "scores": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relevance", "clarity", "depth", "communication", "confidence"],
+          "properties": {
+            "relevance":     { "$ref": "#/$defs/DimensionScore" },
+            "clarity":       { "$ref": "#/$defs/DimensionScore" },
+            "depth":         { "$ref": "#/$defs/DimensionScore" },
+            "communication": { "$ref": "#/$defs/DimensionScore" },
+            "confidence":    { "$ref": "#/$defs/DimensionScore" }
+          }
+        },
+        "totalScore":    { "$ref": "#/$defs/TotalScore" },
+        "summary":       { "type": "string", "minLength": 1, "description": "2-4 sentence narrative shown to recruiters." },
+        "strengths":     { "type": "array", "minItems": 0, "maxItems": 8, "items": { "type": "string", "minLength": 1 } },
+        "weaknesses":    { "type": "array", "minItems": 0, "maxItems": 8, "items": { "type": "string", "minLength": 1 } },
+        "recommendation": { "$ref": "#/$defs/Recommendation" },
+        "providerUsed":  { "$ref": "#/$defs/ProviderUsed" },
+        "scoringModelVersion": { "type": "string", "description": "e.g. \"evaluator-worker@1.0.0+gemini-2.5-flash\". Written to voice_interview_scores.scoring_model_version." },
+        "scoredAt":      { "type": "string", "format": "date-time" }
+      }
+    },
+    "SystemDesignEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "applicationId", "assessmentId", "responseId", "scores", "totalScore", "summary", "strengths", "weaknesses", "recommendation", "providerUsed", "scoredAt"],
+      "properties": {
+        "kind": { "const": "system_design" },
+        "applicationId": { "type": "string", "format": "uuid" },
+        "assessmentId":  { "type": "string", "format": "uuid", "description": "system_design_assessments.id" },
+        "responseId":    { "type": "string", "format": "uuid", "description": "system_design_responses.id" },
+        "problemId":     { "type": ["string", "null"], "format": "uuid" },
+        "scores": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requirements", "scalability", "architecture", "trade_offs", "communication"],
+          "properties": {
+            "requirements":  { "$ref": "#/$defs/DimensionScore" },
+            "scalability":   { "$ref": "#/$defs/DimensionScore" },
+            "architecture":  { "$ref": "#/$defs/DimensionScore" },
+            "trade_offs":    { "$ref": "#/$defs/DimensionScore" },
+            "communication": { "$ref": "#/$defs/DimensionScore" }
+          }
+        },
+        "totalScore":     { "$ref": "#/$defs/TotalScore" },
+        "summary":        { "type": "string", "minLength": 1 },
+        "strengths":      { "type": "array", "minItems": 0, "maxItems": 8, "items": { "type": "string", "minLength": 1 } },
+        "weaknesses":     { "type": "array", "minItems": 0, "maxItems": 8, "items": { "type": "string", "minLength": 1 } },
+        "recommendation": { "$ref": "#/$defs/Recommendation" },
+        "providerUsed":   { "$ref": "#/$defs/ProviderUsed" },
+        "scoringModelVersion": { "type": "string" },
+        "scoredAt":       { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

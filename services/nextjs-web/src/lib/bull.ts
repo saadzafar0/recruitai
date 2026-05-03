@@ -3,6 +3,8 @@ import IORedis, { type RedisOptions } from 'ioredis'
 
 export const CV_PROCESSING_QUEUE_NAME = 'cv-processing'
 export const CODE_SUBMISSIONS_QUEUE_NAME = 'code-submissions'
+export const VOICE_EVALUATION_QUEUE_NAME = 'voice-interview-evaluation'
+export const SYSTEM_DESIGN_EVALUATION_QUEUE_NAME = 'system-design-evaluation'
 
 export interface SubmissionJobPayload {
 	application_id: string
@@ -16,6 +18,8 @@ type BullResources = {
 	connection: IORedis
 	cvProcessingQueue: Queue
 	codeSubmissionsQueue: Queue<SubmissionJobPayload>
+	voiceEvaluationQueue: Queue
+	systemDesignEvaluationQueue: Queue
 }
 
 type GlobalWithBullResources = typeof globalThis & {
@@ -62,6 +66,8 @@ function createBullResources(): BullResources {
 		connection,
 		cvProcessingQueue: new Queue(CV_PROCESSING_QUEUE_NAME, { connection }),
 		codeSubmissionsQueue: new Queue<SubmissionJobPayload>(CODE_SUBMISSIONS_QUEUE_NAME, { connection }),
+		voiceEvaluationQueue: new Queue(VOICE_EVALUATION_QUEUE_NAME, { connection }),
+		systemDesignEvaluationQueue: new Queue(SYSTEM_DESIGN_EVALUATION_QUEUE_NAME, { connection }),
 	}
 }
 
@@ -77,6 +83,8 @@ if (process.env.NODE_ENV !== 'production') {
 export const redisConnection = bullResources.connection
 export const cvProcessingQueue = bullResources.cvProcessingQueue
 export const codeSubmissionsQueue = bullResources.codeSubmissionsQueue
+export const voiceEvaluationQueue = bullResources.voiceEvaluationQueue
+export const systemDesignEvaluationQueue = bullResources.systemDesignEvaluationQueue
 
 export async function addSubmissionJob(payload: SubmissionJobPayload): Promise<string> {
 	const job = await codeSubmissionsQueue.add('submission', payload, {
