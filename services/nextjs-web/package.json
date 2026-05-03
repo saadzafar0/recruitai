@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:push": "node ./scripts/db-push.cjs"
+    "db:push": "node ./scripts/db-push.cjs",
+    "test:e2e": "tsx src/scripts/e2e-test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1012.0",
@@ -32,6 +33,7 @@
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.0"
   }
 }
