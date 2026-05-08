@@ -1,0 +1,25 @@
+# recruitai - nextjs-web Kubernetes Service
+#
+# ClusterIP service exposing the Next.js application on port 80.
+# The ALB Ingress Controller targets this service directly (target-type: ip),
+# so ClusterIP is sufficient — no NodePort needed.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-web
+  namespace: recruitai
+  labels:
+    app: recruitai-nextjs-web
+    app.kubernetes.io/name: recruitai-nextjs-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: recruitai
+spec:
+  type: ClusterIP
+  selector:
+    app: recruitai-nextjs-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP

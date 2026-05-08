@@ -1,0 +1,68 @@
+# recruitai - AWS ALB Ingress Controller
+#
+# Routes public internet traffic to the nextjs-web ClusterIP service.
+#
+# Prerequisites:
+#   1. AWS Load Balancer Controller installed on the EKS cluster
+#      https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html
+#   2. ACM certificate for HTTPS (optional — remove ssl annotations for HTTP-only)
+#   3. Subnets tagged with:
+#      - kubernetes.io/role/elb=1 (public subnets for internet-facing ALB)
+#
+# After apply:
+#   kubectl get ingress -n recruitai
+#   → ALB DNS name appears in the ADDRESS column within ~3 minutes
+#   → Point your domain DNS (CNAME or Route53 alias) to that ALB DNS name
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: recruitai-alb-ingress
+  namespace: recruitai
+  labels:
+    app.kubernetes.io/name: recruitai-ingress
+    app.kubernetes.io/part-of: recruitai
+  annotations:
+    # ── ALB Controller ────────────────────────────────────────────────────
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # ── Listeners ─────────────────────────────────────────────────────────
+    # Listen on both HTTP (80) and HTTPS (443).
+    # HTTP traffic is redirected to HTTPS via the ssl-redirect action.
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+
+    # ── TLS / Certificate ─────────────────────────────────────────────────
+    # Replace with your ACM certificate ARN.
+    # To find it: aws acm list-certificates --region ap-south-1
+    # If running HTTP-only for now, remove the certificate-arn and ssl-redirect annotations.
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-south-1:858714464726:certificate/CHANGE_ME"
+
+    # ── Health checks ─────────────────────────────────────────────────────
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    alb.ingress.kubernetes.io/success-codes: "200-399"
+
+    # ── Misc ──────────────────────────────────────────────────────────────
+    # Idle timeout matches Next.js SSR response budget
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
+    # Group multiple Ingress resources into a single ALB if needed
+    alb.ingress.kubernetes.io/group.name: recruitai
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          # Route all traffic to the Next.js web service
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nextjs-web
+                port:
+                  number: 80

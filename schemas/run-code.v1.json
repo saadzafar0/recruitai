@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recruitai.dev/schemas/run-code.v1.json",
+  "title": "code-submissions queue payload",
+  "description": "BullMQ job payload for the 'code-submissions' queue. Produced by nextjs-web (POST /api/v1/submissions), consumed by executor-worker.",
+  "type": "object",
+  "required": ["application_id", "code", "language"],
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The application UUID this code submission belongs to."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Source code to execute."
+    },
+    "language": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Programming language (must match a coding_language enum value: python, javascript, typescript, java, cpp, c, csharp, go, rust, ruby, swift, kotlin, php, sql, r)."
+    },
+    "test_cases": {
+      "type": "array",
+      "description": "Optional inline test cases. If omitted, the worker loads test cases from the coding_test_cases table for the assigned problem.",
+      "items": {
+        "type": "object",
+        "required": ["input", "expected_output"],
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "stdin input for this test case."
+          },
+          "expected_output": {
+            "type": "string",
+            "description": "Expected stdout output for comparison."
+          }
+        }
+      }
+    },
+    "time_limit": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optional CPU time limit in milliseconds. Overrides the problem's default."
+    }
+  },
+  "additionalProperties": false
+}
