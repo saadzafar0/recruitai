@@ -1,0 +1,194 @@
+# recruitai - executor-worker (BullMQ consumer for code-submissions queue)
+#
+# Image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-executor-worker:TAG
+# Replace REPLACE_DOCKERHUB_NAMESPACE and tag, or use kustomize/helm.
+#
+# Namespace: recruitai (idempotent; safe to re-apply with other manifests)
+# Public Docker Hub images: no imagePullSecrets required.
+#
+# Scale replicas and EXECUTOR_CONCURRENCY together — each pod runs a BullMQ
+# consumer process with N concurrent workers.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: recruitai
+  labels:
+    app.kubernetes.io/part-of: recruitai
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recruitai-executor-config
+  namespace: recruitai
+  labels:
+    app: recruitai-executor-worker
+    app.kubernetes.io/name: recruitai-executor-worker
+    app.kubernetes.io/component: executor
+    app.kubernetes.io/part-of: recruitai
+data:
+  JUDGE0_URL: "http://13.201.36.64:2358"
+  SUPABASE_URL: "https://emxrwjmowbtpbmovdrdp.supabase.co"
+  REDIS_HOST: "your-redis-host"
+  REDIS_PORT: "6379"
+  REDIS_TLS: "false"
+  EXECUTOR_CONCURRENCY: "2"
+  EXECUTOR_POLL_INTERVAL_MS: "2000"
+  EXECUTOR_POLL_MAX_ATTEMPTS: "60"
+  EXECUTOR_SUBMISSION_TIMEOUT_MS: "30000"
+  # Set when the Next.js service has a public URL for Judge0 callbacks
+  # JUDGE0_CALLBACK_URL: "https://your-domain.com/api/v1/webhooks/judge0"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: recruitai-executor-secrets
+  namespace: recruitai
+  labels:
+    app: recruitai-executor-worker
+    app.kubernetes.io/part-of: recruitai
+type: Opaque
+stringData:
+  REDIS_URL: "redis://:CHANGE_ME@your-redis-host:6379/0"
+  REDIS_PASSWORD: "CHANGE_ME"
+  SUPABASE_SERVICE_ROLE_KEY: "CHANGE_ME"
+  # Optional: Judge0 API auth token (leave empty if not required)
+  JUDGE0_API_TOKEN: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: executor-worker
+  namespace: recruitai
+  labels:
+    app: recruitai-executor-worker
+    app.kubernetes.io/name: recruitai-executor-worker
+    app.kubernetes.io/component: executor
+    app.kubernetes.io/part-of: recruitai
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: recruitai-executor-worker
+  template:
+    metadata:
+      labels:
+        app: recruitai-executor-worker
+        app.kubernetes.io/name: recruitai-executor-worker
+    spec:
+      containers:
+        - name: executor
+          image: docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-executor-worker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: app
+              containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: JUDGE0_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: JUDGE0_URL
+            - name: SUPABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: SUPABASE_URL
+            - name: SUPABASE_SERVICE_ROLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-executor-secrets
+                  key: SUPABASE_SERVICE_ROLE_KEY
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-executor-secrets
+                  key: REDIS_URL
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: REDIS_PORT
+            - name: REDIS_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: REDIS_TLS
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-executor-secrets
+                  key: REDIS_PASSWORD
+            - name: JUDGE0_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: recruitai-executor-secrets
+                  key: JUDGE0_API_TOKEN
+            - name: EXECUTOR_CONCURRENCY
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: EXECUTOR_CONCURRENCY
+            - name: EXECUTOR_POLL_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: EXECUTOR_POLL_INTERVAL_MS
+            - name: EXECUTOR_POLL_MAX_ATTEMPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: EXECUTOR_POLL_MAX_ATTEMPTS
+            - name: EXECUTOR_SUBMISSION_TIMEOUT_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: recruitai-executor-config
+                  key: EXECUTOR_SUBMISSION_TIMEOUT_MS
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test -d /app/dist
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: executor-worker
+  namespace: recruitai
+  labels:
+    app: recruitai-executor-worker
+    app.kubernetes.io/name: recruitai-executor-worker
+    app.kubernetes.io/part-of: recruitai
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: recruitai-executor-worker
+  ports:
+    - name: app
+      port: 80
+      targetPort: app
+      protocol: TCP
