@@ -108,5 +108,50 @@ export async function persistVoiceEvaluation(
 		`[evaluator-worker] Voice evaluation written: application=${input.applicationId} session=${input.sessionId} total=${evaluation.totalScore} provider=${evaluation.providerUsed}`,
 	)
 
+	// Trigger auto-scoring: check if all stages are now complete
+	try {
+		const { data: application } = await supabaseAdmin
+			.from('applications')
+			.select('job_id, cv_score, coding_score, system_design_score')
+			.eq('id', input.applicationId)
+			.maybeSingle()
+
+		if (application) {
+			const { data: job } = await supabaseAdmin
+				.from('job_postings')
+				.select('weight_cv, weight_voice, weight_coding, weight_system_design')
+				.eq('id', application.job_id)
+				.maybeSingle()
+
+			if (job) {
+				const w = job
+				const allPresent =
+					((w.weight_cv ?? 25) === 0 || application.cv_score !== null) &&
+					((w.weight_coding ?? 30) === 0 || application.coding_score !== null) &&
+					((w.weight_system_design ?? 10) === 0 || application.system_design_score !== null)
+
+				if (allPresent) {
+					console.info(`[evaluator-worker] All stage scores present for application ${input.applicationId}, triggering aggregation via scoring API`)
+
+					const scoringUrl = process.env.SCORING_API_URL || 'http://localhost:3000/api/v1/scoring/aggregate'
+					const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+					await fetch(scoringUrl, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							...(serviceKey ? { Authorization: `Bearer ${serviceKey}` } : {}),
+						},
+						body: JSON.stringify({ application_id: input.applicationId }),
+					}).catch((err) => {
+						console.warn(`[evaluator-worker] Failed to trigger scoring API: ${err instanceof Error ? err.message : err}`)
+					})
+				}
+			}
+		}
+	} catch (err) {
+		console.warn(`[evaluator-worker] Auto-scoring check failed: ${err instanceof Error ? err.message : err}`)
+	}
+
 	return output
 }

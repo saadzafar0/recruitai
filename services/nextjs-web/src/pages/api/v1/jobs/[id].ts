@@ -52,10 +52,10 @@ export default async function handler(
     return res.status(403).json({ error: 'Only recruiters can manage job postings' })
   }
 
-  // Verify ownership of the job
+  // Verify the job belongs to the user's organization
   const { data: existingJob, error: fetchError } = await supabaseAdmin
     .from('job_postings')
-    .select('id, created_by')
+    .select('id, organization_id')
     .eq('id', id)
     .single()
 
@@ -63,7 +63,7 @@ export default async function handler(
     return res.status(404).json({ error: 'Job posting not found' })
   }
 
-  if (existingJob.created_by !== profile.id && profile.role !== 'admin') {
+  if (existingJob.organization_id !== profile.organization_id && profile.role !== 'admin') {
     return res.status(403).json({ error: 'You do not have permission to access this job posting' })
   }
 

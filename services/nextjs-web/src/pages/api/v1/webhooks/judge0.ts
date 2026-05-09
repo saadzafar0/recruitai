@@ -160,32 +160,54 @@ export default async function handler(
       .join('\n')
       .trim()
 
-    // Update any pending submissions. In practice the executor-worker's
-    // polling loop has already persisted the result, but this serves as
-    // a faster notification path when callback mode is enabled.
-    const updatePayload: Record<string, unknown> = {
-      verdict,
-      runtime_ms: runtimeMs,
-      memory_used_mb: memoryMb,
+    // Look up pending submissions by matching against recent submissions.
+    // The executor-worker stores submissions with verdict='pending'.
+    // We look for a pending submission that was created recently (within 10 min).
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+
+    const { data: pendingSubmission, error: lookupError } = await supabaseAdmin
+      .from('coding_submissions')
+      .select('id, assessment_id')
+      .eq('verdict', 'pending')
+      .gte('created_at', tenMinutesAgo)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (lookupError) {
+      console.warn(`[Judge0 webhook] Submission lookup failed: ${lookupError.message}`)
     }
 
-    if (verdict === 'accepted') {
-      // We know the test passed, but the executor-worker handles
-      // comprehensive per-test-case scoring, so we only set the verdict.
-      updatePayload.test_cases_passed = 1
-    }
+    if (pendingSubmission) {
+      const updatePayload: Record<string, unknown> = {
+        verdict,
+        runtime_ms: runtimeMs,
+        memory_used_mb: memoryMb,
+      }
 
-    if (errorOutput) {
-      updatePayload.ai_feedback = `Judge0 output:\n${errorOutput}`
-    }
+      if (errorOutput) {
+        updatePayload.ai_feedback = `Judge0 output:\n${errorOutput}`
+      }
 
-    console.info(
-      `[Judge0 webhook] Processed callback — token=${token} verdict=${verdict} stdout_chars=${stdout.length}`,
-    )
+      const { error: updateError } = await supabaseAdmin
+        .from('coding_submissions')
+        .update(updatePayload)
+        .eq('id', pendingSubmission.id)
+
+      if (updateError) {
+        console.warn(`[Judge0 webhook] Failed to update submission: ${updateError.message}`)
+      } else {
+        console.info(
+          `[Judge0 webhook] Updated submission ${pendingSubmission.id} — verdict=${verdict} runtime=${runtimeMs}ms`,
+        )
+      }
+    } else {
+      console.info(`[Judge0 webhook] No pending submission found for token=${token}. Executor-worker may have already processed it.`)
+    }
 
     return res.status(200).json({
       success: true,
-      action: 'processed',
+      action: pendingSubmission ? 'updated' : 'no_pending_submission',
       token,
     })
   } catch (error) {
