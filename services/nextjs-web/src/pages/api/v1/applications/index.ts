@@ -119,7 +119,7 @@ export default async function handler(
       .from('profiles')
       .select('id')
       .eq('email', validatedData.email)
-      .single()
+      .maybeSingle()
 
     let profileId: string
 
@@ -133,7 +133,7 @@ export default async function handler(
         .select('id')
         .eq('job_id', validatedData.job_id)
         .eq('applicant_id', profileId)
-        .single()
+        .maybeSingle()
 
       if (existingApplication) {
         console.warn('[API /api/v1/applications] Duplicate application blocked', {
