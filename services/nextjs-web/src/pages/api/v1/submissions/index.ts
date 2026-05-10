@@ -5,6 +5,7 @@ import { addSubmissionJob } from '../../../../lib/bull'
 
 const SubmissionSchema = z.object({
   application_id: z.string().uuid(),
+  coding_problem_id: z.string().uuid().optional(),
   code: z.string().min(1),
   language: z.string().min(1),
   test_cases: z.unknown().optional(),
@@ -40,7 +41,21 @@ export default async function handler(
   }
 
   try {
+    console.log('[Submissions API] Received submission request:', {
+      body_keys: Object.keys(req.body),
+      application_id: req.body.application_id,
+      coding_problem_id: req.body.coding_problem_id,
+      language: req.body.language,
+      code_length: req.body.code?.length,
+    })
+
     const validatedData = SubmissionSchema.parse(req.body)
+
+    console.log('[Submissions API] Validated submission data:', {
+      application_id: validatedData.application_id,
+      coding_problem_id: validatedData.coding_problem_id,
+      language: validatedData.language,
+    })
 
     // Verify application exists
     const { data: application, error: appError } = await supabaseAdmin
@@ -56,13 +71,17 @@ export default async function handler(
       })
     }
 
+   
     const blockedStatuses = ['draft', 'withdrawn', 'rejected']
+
     if (blockedStatuses.includes(application.status)) {
       return res.status(400).json({
         success: false,
-        error: `Cannot submit code for application in '${application.status}' status`,
+        error: `Cannot submit code for applications in '${application.status}' status`,
       })
     }
+
+    console.log('[Submissions API] Pushing job to BullMQ with payload:', validatedData)
 
     // Push job to BullMQ queue
     const job_id = await addSubmissionJob(validatedData)
@@ -70,6 +89,7 @@ export default async function handler(
     console.info('[Submissions] New submission queued', {
       job_id,
       application_id: validatedData.application_id,
+      coding_problem_id: validatedData.coding_problem_id,
       language: validatedData.language,
     })
 

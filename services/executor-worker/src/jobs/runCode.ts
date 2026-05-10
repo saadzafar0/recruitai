@@ -41,6 +41,7 @@ export const CODE_SUBMISSIONS_QUEUE_NAME =
 
 export interface CodeSubmissionJobData {
 	application_id: string
+	coding_problem_id?: string
 	code: string
 	language: string
 	test_cases?: unknown
@@ -84,6 +85,10 @@ interface TestCaseRow {
 
 interface JobProblemRow {
 	problem_id: string
+}
+
+interface CodingProblemRow {
+	id: string
 }
 
 // ---------------------------------------------------------------------------
@@ -152,6 +157,54 @@ async function findProblemForApplication(applicationId: string): Promise<string 
 		.maybeSingle()
 
 	return (problemRow as JobProblemRow | null)?.problem_id || null
+}
+
+async function validateProvidedProblem(problemId: string): Promise<string | null> {
+	console.log('[executor-worker] Validating provided problem ID:', problemId)
+	
+	const { data, error } = await supabaseAdmin
+		.from('coding_problems')
+		.select('id')
+		.eq('id', problemId)
+		.maybeSingle()
+
+	if (error) {
+		console.error('[executor-worker] Error validating problem:', error.message)
+		throw new Error(`Failed to validate coding_problem_id: ${error.message}`)
+	}
+
+	if (data) {
+		console.log('[executor-worker] Problem ID validation SUCCESS:', problemId)
+	} else {
+		console.warn('[executor-worker] Problem ID validation FAILED - ID not found:', problemId)
+	}
+
+	return (data as CodingProblemRow | null)?.id || null
+}
+
+async function resolveProblemId(applicationId: string, preferredProblemId?: string): Promise<string | null> {
+	console.log('[executor-worker] resolveProblemId called with:', {
+		applicationId,
+		preferredProblemId: preferredProblemId || 'NONE',
+	})
+
+	if (preferredProblemId) {
+		console.log('[executor-worker] Attempting to validate provided problem ID...')
+		const validatedProblemId = await validateProvidedProblem(preferredProblemId)
+		if (validatedProblemId) {
+			console.log('[executor-worker] Provided problem ID validated and will be used')
+			return validatedProblemId
+		}
+
+		console.warn(
+			`[executor-worker] Provided coding_problem_id ${preferredProblemId} was not found for application ${applicationId}. Falling back to job mapping.`,
+		)
+	}
+
+	console.log('[executor-worker] No provided problem ID, falling back to job mapping...')
+	const result = await findProblemForApplication(applicationId)
+	console.log('[executor-worker] Job mapping result:', result || 'NO PROBLEM FOUND')
+	return result
 }
 
 async function findOrCreateSubmission(
@@ -252,6 +305,9 @@ async function processCodeSubmission(
 	job: Job<CodeSubmissionJobData>,
 ): Promise<SubmissionScoreOutput> {
 	const applicationId = requireString(job.data.application_id, 'application_id')
+	const preferredProblemId = typeof job.data.coding_problem_id === 'string'
+		? job.data.coding_problem_id.trim()
+		: ''
 	const sourceCode = requireString(job.data.code, 'code')
 	const language = requireString(job.data.language, 'language')
 	const timeLimitHint = typeof job.data.time_limit === 'number' ? job.data.time_limit : undefined
@@ -259,6 +315,14 @@ async function processCodeSubmission(
 	console.info(
 		`[executor-worker] Processing job ${job.id || 'unknown'} for application ${applicationId} (${language})`,
 	)
+
+	console.log('[executor-worker] Job data received:', {
+		job_id: job.id,
+		application_id: applicationId,
+		coding_problem_id: preferredProblemId || 'NOT PROVIDED',
+		language: language,
+		code_length: sourceCode.length,
+	})
 
 	// Resolve Judge0 language ID
 	const languageId = getJudge0LanguageId(language)
@@ -270,14 +334,56 @@ async function processCodeSubmission(
 
 	// Set up assessment + submission in Supabase
 	const assessment = await findOrCreateAssessment(applicationId)
-	const problemId = await findProblemForApplication(applicationId)
+	
+	console.log('[executor-worker] Resolving problem ID:', {
+		provided_problem_id: preferredProblemId || 'NONE',
+		application_id: applicationId,
+	})
+	
+	let problemId = await resolveProblemId(applicationId, preferredProblemId || undefined)
 
-	// If no problem is linked to the job, create a generic submission
-	const effectiveProblemId = problemId || '00000000-0000-0000-0000-000000000000'
+	// If no problem linked to the job, create a placeholder problem so FK won't fail
+	async function createPlaceholderProblem(): Promise<string> {
+		const title = `Auto-generated placeholder problem for application ${applicationId}`
+		const { data: created, error: insErr } = await supabaseAdmin
+			.from('coding_problems')
+			.insert({
+				title,
+				description: 'Placeholder problem created automatically by executor-worker',
+				difficulty: 'easy',
+				supported_languages: ['python','javascript','typescript','java','c','cpp'],
+				is_active: false,
+				created_at: new Date().toISOString(),
+			})
+			.select('id')
+			.single()
+
+		if (insErr || !created) {
+			throw new Error(`Failed to create placeholder coding_problem: ${insErr?.message || 'unknown'}`)
+		console.warn('[executor-worker] No problem ID resolved, creating placeholder')
+		problemId = await createPlaceholderProblem()
+		console.info(`[executor-worker] Created placeholder problem ${problemId} for application ${applicationId}`)
+	} else {
+		console.log('[executor-worker] Problem ID resolved:', problemId)
+	}
+
+	console.log('[executor-worker] About to create submission with:', {
+		assessment_id: assessment.id,
+		problem_id: problemId,
+		language: language,
+		code_length: sourceCode.length,
+	});
+	return created.id
+	}
+
+	if (!problemId) {
+		problemId = await createPlaceholderProblem()
+		console.info(`[executor-worker] Created placeholder problem ${problemId} for application ${applicationId}`)
+	}
 
 	const submission = await findOrCreateSubmission(
 		assessment.id,
-		effectiveProblemId,
+		problemId,
 		language,
 		sourceCode,
 	)
@@ -383,7 +489,7 @@ async function processCodeSubmission(
 		submissionId: submission.id,
 		assessmentId: assessment.id,
 		applicationId,
-		problemId: effectiveProblemId,
+		problemId,
 		verdict: overallVerdict,
 		testCasesTotal: totalTests,
 		testCasesPassed: effectivePassedTests,

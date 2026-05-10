@@ -8,6 +8,7 @@ export const SYSTEM_DESIGN_EVALUATION_QUEUE_NAME = 'system-design-evaluation'
 
 export interface SubmissionJobPayload {
 	application_id: string
+	coding_problem_id?: string
 	code: string
 	language: string
 	test_cases?: unknown
@@ -98,9 +99,23 @@ export const voiceEvaluationQueue = bullResources.voiceEvaluationQueue
 export const systemDesignEvaluationQueue = bullResources.systemDesignEvaluationQueue
 
 export async function addSubmissionJob(payload: SubmissionJobPayload): Promise<string> {
+	console.log('[bull.ts] Adding submission job with payload:', {
+		application_id: payload.application_id,
+		coding_problem_id: payload.coding_problem_id,
+		language: payload.language,
+		code_length: payload.code.length,
+	})
+
 	const job = await codeSubmissionsQueue.add('submission', payload, {
 		attempts: 3,
 		backoff: { type: 'exponential', delay: 1000 },
 	})
+
+	console.log('[bull.ts] Job added successfully:', {
+		job_id: job.id,
+		payload_keys: Object.keys(payload),
+		coding_problem_id_in_payload: payload.coding_problem_id,
+	})
+
 	return job.id!
 }
