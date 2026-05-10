@@ -98,7 +98,8 @@ export function mapJudge0StatusToVerdict(statusId: number): SubmissionVerdict {
 		case 13:
 		case 14:
 		default:
-			return 'internal_error'
+			// Map to runtime_error for now to avoid DB enum conflicts if 'internal_error' is missing
+			return 'runtime_error'
 	}
 }
 
@@ -246,7 +247,7 @@ export async function submitToJudge0(
 	}
 
 	const endpoint = `${baseUrl}/submissions?base64_encoded=true&wait=false`
-
+	console.log(`[executor-worker] Submitting to Judge0: ${endpoint}`)
 	const response = await fetch(endpoint, {
 		method: 'POST',
 		headers: {

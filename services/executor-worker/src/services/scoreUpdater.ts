@@ -50,6 +50,9 @@ export interface SubmissionScoreOutput {
 export async function persistExecutionResults(
 	input: SubmissionScoreInput,
 ): Promise<SubmissionScoreOutput> {
+	console.info(
+		`[executor-worker] Persisting results for submission ${input.submissionId}: verdict=${input.verdict} score=${input.scoreCorrectness} passed=${input.testCasesPassed}/${input.testCasesTotal}`,
+	)
 	// 1. Update the coding_submissions row
 	const { error: subError } = await supabaseAdmin
 		.from('coding_submissions')

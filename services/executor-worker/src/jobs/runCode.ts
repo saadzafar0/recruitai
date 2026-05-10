@@ -21,6 +21,7 @@ import {
 	submitToJudge0,
 	pollSubmissionResult,
 	type Judge0SubmissionResult,
+	type SubmissionVerdict,
 } from '../services/judge0'
 import {
 	persistExecutionResults,
@@ -419,12 +420,13 @@ async function processCodeSubmission(
 
 	// Execute each test case
 	const testCaseResults: TestCaseResult[] = []
-	let overallVerdict: 'accepted' | 'wrong_answer' | 'time_limit_exceeded' | 'compilation_error' | 'runtime_error' | 'internal_error' = 'accepted'
+	let overallVerdict: SubmissionVerdict = 'accepted'
 	let totalRuntimeMs = 0
 	let maxMemoryKb = 0
 
 	for (const tc of testCases) {
 		try {
+			console.log(`[executor-worker] Executing test case ${tc.id || 'synthetic'} (input length: ${tc.input.length})`)
 			const result = await executeTestCase(
 				sourceCode,
 				languageId,
@@ -436,7 +438,7 @@ async function processCodeSubmission(
 			const passed = result.verdict === 'accepted'
 
 			if (!passed && overallVerdict === 'accepted') {
-				overallVerdict = result.verdict === 'pending' ? 'internal_error' : result.verdict
+				overallVerdict = result.verdict === 'pending' ? 'runtime_error' : result.verdict
 			}
 
 			if (result.time !== null) {
@@ -459,7 +461,7 @@ async function processCodeSubmission(
 			console.warn(`[executor-worker] Test case execution failed: ${message}`)
 
 			if (overallVerdict === 'accepted') {
-				overallVerdict = 'internal_error'
+				overallVerdict = 'runtime_error'
 			}
 
 			if (tc.id) {
