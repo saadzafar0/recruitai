@@ -27,6 +27,7 @@ type GlobalWithBullResources = typeof globalThis & {
 }
 
 function createRedisConnection(): IORedis {
+	// Prefer full connection string environment variables
 	const redisUrl =
 		process.env.REDIS_URL ||
 		process.env.REDIS_CONNECTION_STRING ||
@@ -40,14 +41,24 @@ function createRedisConnection(): IORedis {
 		})
 	}
 
-	const parsedPort = Number(process.env.REDIS_PORT || '6379')
+	// If no connection string provided, require explicit host/port via env.
+	const host = process.env.REDIS_HOST
+	const portEnv = process.env.REDIS_PORT
+
+	if (!host || !portEnv) {
+		throw new Error(
+			'No Redis connection configured. Set REDIS_URL or REDIS_HOST and REDIS_PORT in your .env.local',
+		)
+	}
+
+	const parsedPort = Number(portEnv)
 	const parsedDb = Number(process.env.REDIS_DB || '0')
 	const useTls = (process.env.REDIS_TLS || '').toLowerCase() === 'true'
 
 	const options: RedisOptions = {
-		host: process.env.REDIS_HOST || '127.0.0.1',
-		port: Number.isFinite(parsedPort) ? parsedPort : 6379,
-		db: Number.isFinite(parsedDb) ? parsedDb : 0,
+		host,
+		port: Number.isFinite(parsedPort) ? parsedPort : undefined,
+		db: Number.isFinite(parsedDb) ? parsedDb : undefined,
 		username: process.env.REDIS_USERNAME || undefined,
 		password: process.env.REDIS_PASSWORD || undefined,
 		maxRetriesPerRequest: null,

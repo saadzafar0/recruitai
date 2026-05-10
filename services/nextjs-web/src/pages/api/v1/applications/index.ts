@@ -317,14 +317,29 @@ export default async function handler(
       console.error('[API /api/v1/applications] Failed to write status log', statusLogError)
     }
 
-    // 8. Update job application count (optional, ignore errors)
+    // 8. Update job application and view counts
     try {
-      await supabaseAdmin.rpc('increment_application_count', {
+      await supabaseAdmin.rpc('increment_job_metrics', {
         job_id: validatedData.job_id,
       })
     } catch (rpcError) {
-      console.warn('[API /api/v1/applications] increment_application_count RPC failed', rpcError)
-      // Ignore if RPC doesn't exist
+      console.warn('[API /api/v1/applications] increment_job_metrics RPC failed, using direct update', rpcError)
+      // Fallback: manually increment both if RPC is missing
+      const { data: jobInfo } = await supabaseAdmin
+        .from('job_postings')
+        .select('applications_count, views_count')
+        .eq('id', validatedData.job_id)
+        .single()
+      
+      if (jobInfo) {
+        await supabaseAdmin
+          .from('job_postings')
+          .update({
+            applications_count: (jobInfo.applications_count || 0) + 1,
+            views_count: (jobInfo.views_count || 0) + 1,
+          })
+          .eq('id', validatedData.job_id)
+      }
     }
 
     console.info('[API /api/v1/applications] Application created', {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { type BeforeMount } from '@monaco-editor/react';
 import { Play, CheckCircle, XCircle, ChevronDown } from 'lucide-react';
 
 const problem = {
@@ -32,18 +32,51 @@ const starterCode: Record<string, string> = {
 
     return [];
 }`,
+  TypeScript: `function twoSum(nums: number[], target: number): number[] {
+    const seen = new Map<number, number>();
+
+    for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+
+        if (seen.has(complement)) {
+            return [seen.get(complement)!, i];
+        }
+
+        seen.set(nums[i], i);
+    }
+
+    return [];
+}`,
   Java: `class Solution {
     public int[] twoSum(int[] nums, int target) {
 
     }
+}`,
+  C: `#include <stdio.h>
+
+int main() {
+    // TODO: Implement Two Sum
+    return 0;
+}`,
+  'C++': `#include <vector>
+using namespace std;
+
+vector<int> twoSum(vector<int>& nums, int target) {
+    // TODO: Implement Two Sum
+    return {};
 }`,
 };
 
 const monacoLanguageMap: Record<string, string> = {
   Python: 'python',
   JavaScript: 'javascript',
+  TypeScript: 'typescript',
   Java: 'java',
+  C: 'c',
+  'C++': 'cpp',
 };
+
+const languageOptions = ['Python', 'JavaScript', 'TypeScript', 'Java', 'C', 'C++'];
 
 const testCases = [
   { input: '[2,7,11,15], target=9', expected: '[0,1]', actual: '[0,1]', passed: true },
@@ -62,12 +95,45 @@ function formatTime(seconds: number) {
   return `${m}:${s}`;
 }
 
-export default function CodingAssessment() {
+export default function CodingAssessment({ applicationId }: { applicationId?: string }) {
   const [language, setLanguage] = useState('Python');
   const [code, setCode] = useState(starterCode['Python']);
   const [consoleOutput, setConsoleOutput] = useState('');
   const [ran, setRan] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45 * 60);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
+  const [submissionStatus, setSubmissionStatus] = useState('');
+  const [lastVerdict, setLastVerdict] = useState('');
+  const [jobId, setJobId] = useState('');
+
+  const handleEditorWillMount: BeforeMount = () => {
+    if (typeof self === 'undefined') {
+      return;
+    }
+
+    if ((self as any).MonacoEnvironment?.getWorker) {
+      return;
+    }
+
+    (self as any).MonacoEnvironment = {
+      getWorker: (_workerId: string, label: string) => {
+        if (label === 'json') {
+          return new Worker(new URL('monaco-editor/esm/vs/language/json/json.worker', import.meta.url));
+        }
+        if (label === 'css' || label === 'scss' || label === 'less') {
+          return new Worker(new URL('monaco-editor/esm/vs/language/css/css.worker', import.meta.url));
+        }
+        if (label === 'html' || label === 'handlebars' || label === 'razor') {
+          return new Worker(new URL('monaco-editor/esm/vs/language/html/html.worker', import.meta.url));
+        }
+        if (label === 'typescript' || label === 'javascript') {
+          return new Worker(new URL('monaco-editor/esm/vs/language/typescript/ts.worker', import.meta.url));
+        }
+        return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker', import.meta.url));
+      },
+    };
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -77,22 +143,105 @@ export default function CodingAssessment() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleRun = () => {
-    setConsoleOutput('Running test cases...\n');
+  const handleRun = async () => {
+    if (!applicationId) {
+      setConsoleOutput('Missing application id. Please return to the assessment lobby and try again.');
+      return;
+    }
 
-    setTimeout(() => {
-      setConsoleOutput(`Running test cases...
+    if (!code.trim()) {
+      setConsoleOutput('Please write some code before running.');
+      return;
+    }
 
-[PASS] Test 1 ✓
-[PASS] Test 2 ✓
+    setIsSubmitting(true);
+    setSubmissionError('');
+    setSubmissionStatus('Submitting...');
+    setConsoleOutput('Submitting to Judge0...\n');
 
-All test cases passed.
-Runtime: 0.003s`);
-      setRan(true);
-    }, 1200);
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+      const response = await fetch('/api/v1/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          application_id: applicationId,
+          code,
+          language: monacoLanguageMap[language],
+          test_cases: testCases,
+          time_limit: 2,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      const data = await response.json()
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to submit code')
+      }
+
+      setJobId(data.data?.job_id || '')
+      setSubmissionStatus('Queued')
+      setConsoleOutput('Submission queued. Waiting for results...')
+      setRan(true)
+      setLastVerdict('pending')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to submit code'
+      if ((err as any)?.name === 'AbortError') {
+        setSubmissionError('Request timed out (10s). Check network or backend and try again.')
+        setSubmissionStatus('Timed out')
+        setConsoleOutput('Submission timed out after 10s. Please try again.')
+      } else {
+        setSubmissionError(message)
+        setSubmissionStatus('Failed')
+        setConsoleOutput(message)
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   };
 
   const isRed = timeLeft < 5 * 60;
+
+  useEffect(() => {
+    if (!applicationId || !jobId || lastVerdict === 'accepted' || lastVerdict === 'wrong_answer') {
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/v1/submissions/latest?application_id=${applicationId}`, {
+          cache: 'no-store',
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data?.success) {
+          return;
+        }
+
+        const verdict = data?.data?.verdict as string | undefined;
+        if (verdict) {
+          setLastVerdict(verdict);
+          setSubmissionStatus(`Result: ${verdict.replace(/_/g, ' ')}`);
+
+          if (verdict !== 'pending') {
+            setConsoleOutput(data?.data?.output || 'Execution completed.');
+          }
+        }
+      } catch {
+        // Ignore polling failures.
+      }
+    };
+
+    const interval = setInterval(poll, 2500);
+    return () => clearInterval(interval);
+  }, [applicationId, jobId, lastVerdict]);
 
   return (
     <div
@@ -194,7 +343,7 @@ Runtime: 0.003s`);
                   border: '1px solid #262B38',
                 }}
               >
-                {['Python', 'JavaScript', 'Java'].map(lang => (
+                {languageOptions.map(lang => (
                   <option key={lang}>{lang}</option>
                 ))}
               </select>
@@ -207,14 +356,16 @@ Runtime: 0.003s`);
 
             <button
               onClick={handleRun}
+              disabled={isSubmitting}
               className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-opacity"
               style={{
                 backgroundColor: '#3ECF8E',
                 color: '#08120D',
+                opacity: isSubmitting ? 0.7 : 1,
               }}
             >
               <Play size={14} />
-              Run Code
+              {isSubmitting ? 'Submitting...' : 'Run Code'}
             </button>
           </div>
 
@@ -225,6 +376,7 @@ Runtime: 0.003s`);
               language={monacoLanguageMap[language]}
               value={code}
               onChange={value => setCode(value || '')}
+              beforeMount={handleEditorWillMount}
               theme="vs-dark"
               options={{
                 fontSize: 13,
@@ -281,6 +433,14 @@ Runtime: 0.003s`);
             >
               {consoleOutput || 'Run your code to see output...'}
             </pre>
+            {submissionStatus ? (
+              <div
+                className="px-4 pb-3 text-xs"
+                style={{ color: submissionError ? '#EF6B6B' : '#7E8494' }}
+              >
+                {submissionError ? `Error: ${submissionError}` : submissionStatus}
+              </div>
+            ) : null}
           </div>
         </div>
 

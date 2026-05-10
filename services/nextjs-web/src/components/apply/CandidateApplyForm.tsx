@@ -316,10 +316,10 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/candidate')}
                 className="px-5 py-2.5 text-sm font-medium text-white rounded bg-accent-purple hover:bg-accent-purple-hover transition-colors cursor-pointer"
               >
-                Back to Homepage
+                Go to Candidate Dashboard
               </button>
               <button
                 type="button"

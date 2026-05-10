@@ -76,7 +76,7 @@ function JobCard({ job }: { job: PublicJob }) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                router.push(`/apply?jobId=${job.id}`)
+                router.push(`/candidate/apply?jobId=${job.id}`)
               }}
               className="px-5 py-2.5 text-sm text-white rounded transition-colors cursor-pointer bg-accent-purple hover:bg-accent-purple-hover font-medium"
             >
