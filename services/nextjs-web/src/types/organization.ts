@@ -28,6 +28,7 @@ export interface OrganizationCreate {
   size_range?: string
   country?: string
   city?: string
+  ats_provider?: string
 }
 
 export interface OrganizationUpdate {
@@ -40,6 +41,7 @@ export interface OrganizationUpdate {
   size_range?: string | null
   country?: string | null
   city?: string | null
+  ats_provider?: string | null
 }
 
 // Industry options

@@ -5,9 +5,9 @@
  * Manage organization details for recruiters
  */
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Globe, MapPin, Users, Save, Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Building2, Save, Loader2, AlertCircle, ArrowLeft, Plus } from 'lucide-react'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useToast } from '@/context/ToastContext'
 import { INDUSTRIES, SIZE_RANGES } from '@/types/organization'
@@ -15,31 +15,60 @@ import type { OrganizationCreate, OrganizationUpdate } from '@/types/organizatio
 
 export default function OrganizationPage() {
   const router = useRouter()
-  const { organization, loading, error, hasOrganization, createOrganization, updateOrganization } = useOrganization()
+  const { organizations, loading, error, createOrganization, updateOrganization } = useOrganization()
   const { showSuccess, showError } = useToast()
+
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null)
+  const [isCreatingNew, setIsCreatingNew] = useState(false)
 
   const [formData, setFormData] = useState<OrganizationCreate>({
     name: '',
+    logo_url: '',
     website_url: '',
     industry: '',
     size_range: '',
     country: 'PK',
     city: '',
+    ats_provider: '',
   })
   const [saving, setSaving] = useState(false)
 
+  const selectedOrganization = useMemo(
+    () => organizations.find((org) => org.id === selectedOrganizationId) || null,
+    [organizations, selectedOrganizationId],
+  )
+
   useEffect(() => {
-    if (organization) {
+    if (!selectedOrganizationId && !isCreatingNew && organizations.length > 0) {
+      setSelectedOrganizationId(organizations[0].id)
+    }
+  }, [organizations, selectedOrganizationId, isCreatingNew])
+
+  useEffect(() => {
+    if (selectedOrganization) {
       setFormData({
-        name: organization.name || '',
-        website_url: organization.website_url || '',
-        industry: organization.industry || '',
-        size_range: organization.size_range || '',
-        country: organization.country || 'PK',
-        city: organization.city || '',
+        name: selectedOrganization.name || '',
+        logo_url: selectedOrganization.logo_url || '',
+        website_url: selectedOrganization.website_url || '',
+        industry: selectedOrganization.industry || '',
+        size_range: selectedOrganization.size_range || '',
+        country: selectedOrganization.country || 'PK',
+        city: selectedOrganization.city || '',
+        ats_provider: selectedOrganization.ats_provider || '',
+      })
+    } else if (isCreatingNew || organizations.length === 0) {
+      setFormData({
+        name: '',
+        logo_url: '',
+        website_url: '',
+        industry: '',
+        size_range: '',
+        country: 'PK',
+        city: '',
+        ats_provider: '',
       })
     }
-  }, [organization])
+  }, [selectedOrganization, isCreatingNew, organizations.length])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -57,17 +86,37 @@ export default function OrganizationPage() {
     setSaving(true)
 
     try {
-      if (hasOrganization) {
+      const payload = {
+        ...formData,
+        logo_url: formData.logo_url.trim() ? formData.logo_url.trim() : undefined,
+        website_url: formData.website_url.trim() ? formData.website_url.trim() : undefined,
+        industry: formData.industry.trim() ? formData.industry.trim() : undefined,
+        size_range: formData.size_range.trim() ? formData.size_range.trim() : undefined,
+        country: formData.country.trim() ? formData.country.trim() : undefined,
+        city: formData.city.trim() ? formData.city.trim() : undefined,
+        ats_provider: formData.ats_provider.trim() ? formData.ats_provider.trim() : undefined,
+      }
+
+      if (selectedOrganizationId) {
         const result = await updateOrganization({
-          id: organization!.id,
-          ...formData,
+          id: selectedOrganizationId,
+          ...payload,
+          logo_url: payload.logo_url ?? null,
+          website_url: payload.website_url ?? null,
+          industry: payload.industry ?? null,
+          size_range: payload.size_range ?? null,
+          country: payload.country ?? null,
+          city: payload.city ?? null,
+          ats_provider: payload.ats_provider ?? null,
         } as OrganizationUpdate)
         if (result) {
           showSuccess('Organization updated successfully')
         }
       } else {
-        const result = await createOrganization(formData)
+        const result = await createOrganization(payload)
         if (result) {
+          setSelectedOrganizationId(result.id)
+          setIsCreatingNew(false)
           showSuccess('Organization created successfully')
         }
       }
@@ -112,12 +161,10 @@ export default function OrganizationPage() {
       <div className="mb-6">
         <h1 className="text-xl sm:text-[1.375rem] font-semibold text-text-primary flex items-center gap-2">
           <Building2 size={24} className="text-accent-purple" />
-          {hasOrganization ? 'Organization Settings' : 'Create Organization'}
+          Organization Settings
         </h1>
         <p className="text-sm mt-1 text-text-secondary">
-          {hasOrganization
-            ? 'Manage your organization details and settings.'
-            : 'Set up your organization to start posting jobs.'}
+          Manage your organization details and add more organizations as needed.
         </p>
       </div>
 
@@ -131,21 +178,69 @@ export default function OrganizationPage() {
         </div>
       )}
 
-      {!hasOrganization && (
-        <div className="mb-6 flex items-start gap-3 px-4 py-3 rounded-lg border border-accent-purple/30 bg-accent-purple/10">
-          <Building2 size={18} className="text-accent-purple flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-accent-purple">Organization Required</p>
-            <p className="text-xs text-accent-purple/80">
-              You need to create an organization before you can post jobs. Fill in the details below to get started.
-            </p>
-          </div>
+      <div className="rounded-lg border bg-theme-card border-theme-border shadow-theme-card transition-colors p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[0.9375rem] font-semibold text-text-primary">Organizations</p>
+          <button
+            type="button"
+            onClick={() => {
+              setIsCreatingNew(true)
+              setSelectedOrganizationId(null)
+            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium bg-theme-input border border-theme-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          >
+            <Plus size={14} />
+            Add organization
+          </button>
         </div>
-      )}
+
+        {organizations.length === 0 ? (
+          <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-accent-purple/30 bg-accent-purple/10">
+            <Building2 size={18} className="text-accent-purple flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-accent-purple">No organizations yet</p>
+              <p className="text-xs text-accent-purple/80">
+                Create your first organization to start posting jobs.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {organizations.map((org) => {
+              const isActive = org.id === selectedOrganizationId
+              return (
+                <button
+                  type="button"
+                  key={org.id}
+                  onClick={() => {
+                    setIsCreatingNew(false)
+                    setSelectedOrganizationId(org.id)
+                  }}
+                  className={`text-left rounded-lg border p-4 transition-colors cursor-pointer ${
+                    isActive
+                      ? 'border-accent-purple bg-accent-purple/10'
+                      : 'border-theme-border bg-theme-input hover:border-theme-border'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-text-primary">{org.name}</p>
+                  <p className="text-xs text-text-secondary mt-1">
+                    {org.city || 'City'}{org.country ? `, ${org.country}` : ''}
+                  </p>
+                  <p className="text-xs text-text-secondary mt-1">
+                    {org.industry || 'Industry not set'}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="rounded-lg border bg-theme-card border-theme-border shadow-theme-card transition-colors p-5">
-          <p className="text-[0.9375rem] font-semibold text-text-primary mb-4">Organization Details</p>
+          <p className="text-[0.9375rem] font-semibold text-text-primary mb-4">
+            {selectedOrganizationId ? 'Organization Details' : 'Create Organization'}
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Organization Name">
@@ -158,6 +253,16 @@ export default function OrganizationPage() {
               />
             </Field>
 
+            <Field label="Logo URL">
+              <input
+                name="logo_url"
+                value={formData.logo_url}
+                onChange={handleChange}
+                className="w-full px-3 py-2.5 text-sm rounded border border-theme-border bg-theme-input text-text-primary outline-none"
+                placeholder="https://cdn.company.com/logo.png"
+              />
+            </Field>
+
             <Field label="Website">
               <input
                 name="website_url"
@@ -165,6 +270,16 @@ export default function OrganizationPage() {
                 onChange={handleChange}
                 className="w-full px-3 py-2.5 text-sm rounded border border-theme-border bg-theme-input text-text-primary outline-none"
                 placeholder="https://company.com"
+              />
+            </Field>
+
+            <Field label="ATS Provider">
+              <input
+                name="ats_provider"
+                value={formData.ats_provider}
+                onChange={handleChange}
+                className="w-full px-3 py-2.5 text-sm rounded border border-theme-border bg-theme-input text-text-primary outline-none"
+                placeholder="Greenhouse"
               />
             </Field>
 

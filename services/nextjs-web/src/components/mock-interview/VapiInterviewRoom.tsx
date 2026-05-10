@@ -30,7 +30,7 @@ function shouldDisplayInterviewError(error: string | null): boolean {
   )
 }
 
-export function VapiInterviewRoom({ backPath = '/user', badgeLabel = 'Mock Interview' }: VapiInterviewRoomProps) {
+export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock Interview' }: VapiInterviewRoomProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const applicationId = useMemo(() => {
@@ -60,7 +60,7 @@ export function VapiInterviewRoom({ backPath = '/user', badgeLabel = 'Mock Inter
     if (!loading && !user) {
       router.push('/login')
     } else if (!loading && user && user.role !== 'applicant') {
-      router.push('/user')
+      router.push('/candidate')
     }
   }, [loading, router, user])
 

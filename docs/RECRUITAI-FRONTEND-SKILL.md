@@ -13,7 +13,7 @@ description: >
 
 > **Always read this file first** before generating any RecruitAI component, page, or feature.
 > It encodes the full prototype's color system, layout rules, spacing system, component
-> patterns, responsiveness strategy, and complete navigation/user flow.
+> patterns, responsiveness strategy, and complete navigation/candidate flow.
 
 ---
 

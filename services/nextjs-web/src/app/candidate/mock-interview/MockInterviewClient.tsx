@@ -62,7 +62,7 @@ export default function MockInterviewClient() {
     if (!loading && !user) {
       router.push('/login')
     } else if (!loading && user && user.role !== 'applicant') {
-      router.push('/user')
+      router.push('/candidate')
     }
   }, [loading, user, router])
 
@@ -70,7 +70,7 @@ export default function MockInterviewClient() {
     if (status === 'connected' || status === 'speaking' || status === 'listening') {
       endCall()
     }
-    router.push('/user')
+    router.push('/candidate')
   }
 
   if (loading) {

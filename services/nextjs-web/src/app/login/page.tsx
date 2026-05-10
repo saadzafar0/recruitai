@@ -47,7 +47,7 @@ export default function Login() {
     }
 
     showSuccess('Welcome back!')
-    setTimeout(() => router.push('/user'), 500)
+    setTimeout(() => router.push('/candidate'), 500)
   }
 
   return (

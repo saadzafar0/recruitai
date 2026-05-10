@@ -51,7 +51,7 @@ export default function UserInterviewPage() {
       <header className="border-b bg-theme-input border-theme-border transition-colors">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <button
-            onClick={() => router.push('/user')}
+            onClick={() => router.push('/candidate')}
             className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           >
             <ArrowLeft size={16} />

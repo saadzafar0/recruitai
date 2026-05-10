@@ -1,21 +1,19 @@
 /**
  * useOrganization Hook
- * Manages organization state and operations for recruiters
+ * Manages recruiter organizations list and CRUD operations
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import type { Organization, OrganizationCreate, OrganizationUpdate } from '@/types/organization'
 
-let organizationCache: Organization | null = null
-let hasOrganizationCache = false
-
 export interface UseOrganizationReturn {
   organization: Organization | null
+  organizations: Organization[]
   loading: boolean
   error: string | null
   hasOrganization: boolean
-  fetchOrganization: () => Promise<void>
+  fetchOrganizations: () => Promise<void>
   createOrganization: (data: OrganizationCreate) => Promise<Organization | null>
   updateOrganization: (data: OrganizationUpdate) => Promise<Organization | null>
   deleteOrganization: () => Promise<boolean>
@@ -23,9 +21,11 @@ export interface UseOrganizationReturn {
 
 export function useOrganization(): UseOrganizationReturn {
   const { session } = useAuth()
-  const [organization, setOrganization] = useState<Organization | null>(hasOrganizationCache ? organizationCache : null)
-  const [loading, setLoading] = useState(!hasOrganizationCache)
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const organization = useMemo(() => organizations[0] || null, [organizations])
 
   const getAuthHeaders = useCallback(() => {
     if (!session?.access_token) {
@@ -37,12 +37,12 @@ export function useOrganization(): UseOrganizationReturn {
     }
   }, [session])
 
-  const fetchOrganization = useCallback(async () => {
-    setLoading(!hasOrganizationCache)
+  const fetchOrganizations = useCallback(async () => {
+    setLoading(true)
     setError(null)
 
     try {
-      const response = await fetch('/api/v1/organization', {
+      const response = await fetch('/api/v1/organization/list', {
         headers: getAuthHeaders(),
       })
 
@@ -51,12 +51,10 @@ export function useOrganization(): UseOrganizationReturn {
         throw new Error(data.error || 'Failed to fetch organization')
       }
 
-      const data = await response.json()
-      setOrganization(data)
-      organizationCache = data
-      hasOrganizationCache = true
+      const data: Organization[] = await response.json()
+      setOrganizations(data)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch organization'
+      const message = err instanceof Error ? err.message : 'Failed to fetch organizations'
       setError(message)
     } finally {
       setLoading(false)
@@ -79,9 +77,7 @@ export function useOrganization(): UseOrganizationReturn {
       }
 
       const newOrg: Organization = await response.json()
-      setOrganization(newOrg)
-      organizationCache = newOrg
-      hasOrganizationCache = true
+      setOrganizations((prev) => [newOrg, ...prev.filter((org) => org.id !== newOrg.id)])
       return newOrg
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create organization'
@@ -91,15 +87,10 @@ export function useOrganization(): UseOrganizationReturn {
   }, [getAuthHeaders])
 
   const updateOrganization = useCallback(async (data: OrganizationUpdate): Promise<Organization | null> => {
-    if (!organization) {
-      setError('No organization to update')
-      return null
-    }
-
     setError(null)
 
     try {
-      const response = await fetch(`/api/v1/organization/${organization.id}`, {
+      const response = await fetch(`/api/v1/organization/${data.id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -111,9 +102,7 @@ export function useOrganization(): UseOrganizationReturn {
       }
 
       const updatedOrg: Organization = await response.json()
-      setOrganization(updatedOrg)
-      organizationCache = updatedOrg
-      hasOrganizationCache = true
+      setOrganizations((prev) => prev.map((org) => (org.id === updatedOrg.id ? updatedOrg : org)))
       return updatedOrg
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update organization'
@@ -123,15 +112,16 @@ export function useOrganization(): UseOrganizationReturn {
   }, [organization, getAuthHeaders])
 
   const deleteOrganization = useCallback(async (): Promise<boolean> => {
-    if (!organization) {
-      setError('No organization to delete')
-      return false
-    }
-
     setError(null)
 
     try {
-      const response = await fetch(`/api/v1/organization/${organization.id}`, {
+      const targetId = organization?.id
+      if (!targetId) {
+        setError('No organization to delete')
+        return false
+      }
+
+      const response = await fetch(`/api/v1/organization/${targetId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       })
@@ -141,9 +131,7 @@ export function useOrganization(): UseOrganizationReturn {
         throw new Error(errorData.error || 'Failed to delete organization')
       }
 
-      setOrganization(null)
-      organizationCache = null
-      hasOrganizationCache = true
+      setOrganizations((prev) => prev.filter((org) => org.id !== targetId))
       return true
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete organization'
@@ -155,7 +143,7 @@ export function useOrganization(): UseOrganizationReturn {
   // Auto-fetch on mount if session is available
   useEffect(() => {
     if (session?.access_token) {
-      fetchOrganization()
+      fetchOrganizations()
     }
   }, [session?.access_token]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -163,8 +151,9 @@ export function useOrganization(): UseOrganizationReturn {
     organization,
     loading,
     error,
-    hasOrganization: !!organization,
-    fetchOrganization,
+    organizations,
+    hasOrganization: organizations.length > 0,
+    fetchOrganizations,
     createOrganization,
     updateOrganization,
     deleteOrganization,

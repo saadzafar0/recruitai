@@ -121,11 +121,6 @@ async function handlePost(
     return res.status(500).json({ error: 'Server configuration error' })
   }
 
-  // Check if user already has an organization
-  if (profile.organization_id) {
-    return res.status(400).json({ error: 'You already have an organization' })
-  }
-
   const body: OrganizationCreate = req.body
 
   if (!body.name) {
@@ -148,6 +143,7 @@ async function handlePost(
       size_range: body.size_range || null,
       country: body.country || 'PK',
       city: body.city || null,
+      ats_provider: body.ats_provider || null,
     })
     .select()
     .single()
@@ -157,17 +153,32 @@ async function handlePost(
     return res.status(500).json({ error: 'Failed to create organization' })
   }
 
-  // Update user's profile with organization_id
-  const { error: updateError } = await supabaseAdmin
-    .from('profiles')
-    .update({ organization_id: org.id })
-    .eq('id', profile.id)
+  const { error: memberError } = await supabaseAdmin
+    .from('organization_members')
+    .insert({
+      organization_id: org.id,
+      user_id: profile.id,
+      role: profile.role,
+    })
 
-  if (updateError) {
-    console.error('Error updating profile:', updateError)
-    // Rollback: delete the organization
+  if (memberError) {
+    console.error('Error creating organization membership:', memberError)
     await supabaseAdmin.from('organizations').delete().eq('id', org.id)
-    return res.status(500).json({ error: 'Failed to link organization to profile' })
+    return res.status(500).json({ error: 'Failed to link organization membership' })
+  }
+
+  if (!profile.organization_id) {
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ organization_id: org.id })
+      .eq('id', profile.id)
+
+    if (updateError) {
+      console.error('Error updating profile:', updateError)
+      await supabaseAdmin.from('organization_members').delete().eq('organization_id', org.id).eq('user_id', profile.id)
+      await supabaseAdmin.from('organizations').delete().eq('id', org.id)
+      return res.status(500).json({ error: 'Failed to link organization to profile' })
+    }
   }
 
   return res.status(201).json(org)

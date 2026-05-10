@@ -107,6 +107,7 @@ async function handlePut(
   if (body.size_range !== undefined) updateData.size_range = body.size_range
   if (body.country !== undefined) updateData.country = body.country
   if (body.city !== undefined) updateData.city = body.city
+  if (body.ats_provider !== undefined) updateData.ats_provider = body.ats_provider
   updateData.updated_at = new Date().toISOString()
 
   const { data: org, error } = await supabaseAdmin

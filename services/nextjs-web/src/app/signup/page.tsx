@@ -79,7 +79,7 @@ export default function SignUp() {
     }
 
     showSuccess('Account created successfully!')
-    setTimeout(() => router.push('/user'), 500)
+    setTimeout(() => router.push('/candidate'), 500)
   }
 
   return (

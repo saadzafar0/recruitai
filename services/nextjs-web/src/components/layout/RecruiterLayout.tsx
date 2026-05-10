@@ -27,7 +27,7 @@ export function RecruiterLayout({ children, title }: RecruiterLayoutProps) {
     if (!loading && !user) {
       router.push('/login')
     } else if (!loading && user && user.role !== 'recruiter') {
-      router.push('/user')
+      router.push('/candidate')
     }
   }, [loading, user, router])
 
