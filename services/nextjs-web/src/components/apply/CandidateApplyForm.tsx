@@ -1,6 +1,6 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Briefcase, FileText, Link2, Loader2, Mail, Phone, Upload, User } from 'lucide-react'
+import { FileText, Link2, Loader2, Mail, Phone, Upload, User } from 'lucide-react'
 import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 import { AuthError } from '@/components/auth'
 import { useToast } from '@/context/ToastContext'
@@ -64,23 +64,74 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
     ...initialFormState,
     jobId: initialJobId,
   })
+  const [jobTitle, setJobTitle] = useState<string>('Loading job details...')
   const [cvFile, setCvFile] = useState<File | null>(null)
+
+  useEffect(() => {
+    if (initialJobId) {
+      fetch('/api/v1/public/jobs')
+        .then(res => res.json())
+        .then(data => {
+          const job = data.jobs?.find((j: any) => j.id === initialJobId)
+          if (job) {
+            setJobTitle(job.title)
+          } else {
+            setJobTitle('Job Posting')
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch job title', err)
+          setJobTitle('Job Posting')
+        })
+    } else {
+      setJobTitle('Job Posting')
+    }
+  }, [initialJobId])
+
+  const [cvUploading, setCvUploading] = useState(false)
+  const [uploadedCv, setUploadedCv] = useState<{ url: string; key: string; fileName: string } | null>(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submittedApplicationId, setSubmittedApplicationId] = useState('')
 
   const isSuccess = submittedApplicationId.length > 0
 
-  const selectedFileLabel = useMemo(() => {
-    if (!cvFile) {
-      return 'No CV selected yet (optional)'
-    }
-    const sizeMb = (cvFile.size / (1024 * 1024)).toFixed(2)
-    return `${cvFile.name} (${sizeMb} MB)`
-  }, [cvFile])
-
   const updateField = (key: keyof ApplyFormState, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleUploadCV = async () => {
+    if (!cvFile) return
+    
+    setCvUploading(true)
+    setError('')
+    
+    try {
+      console.info('[ApplyForm] Ingesting CV', {
+        fileName: cvFile.name,
+        fileSize: cvFile.size,
+      })
+      
+      const uploadResult = await uploadCV(cvFile)
+      
+      if (!uploadResult.success || !uploadResult.url) {
+        const uploadError = uploadResult.error || 'CV ingestion failed.'
+        setError(uploadError)
+        showError(uploadError)
+      } else {
+        setUploadedCv({
+          url: uploadResult.url,
+          key: uploadResult.key || '',
+          fileName: uploadResult.fileName || cvFile.name,
+        })
+        showSuccess('CV ingested and queued for parsing.')
+      }
+    } catch (err) {
+      console.error('[ApplyForm] CV ingestion error', err)
+      setError('An unexpected error occurred during CV ingestion.')
+    } finally {
+      setCvUploading(false)
+    }
   }
 
   const validate = (): string => {
@@ -159,33 +210,22 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
     setSubmitting(true)
 
     try {
-      let cvFileUrl: string | undefined
-      let cvFileName: string | undefined
-      let cvFileKey: string | undefined
+      let cvFileUrl = uploadedCv?.url
+      let cvFileName = uploadedCv?.fileName
+      let cvFileKey = uploadedCv?.key
 
-      if (cvFile) {
-        console.info('[ApplyForm] Uploading CV', {
+      if (!cvFileUrl && cvFile) {
+        console.info('[ApplyForm] Uploading CV on submission', {
           fileName: cvFile.name,
-          fileType: cvFile.type,
-          fileSize: cvFile.size,
         })
         const uploadResult = await uploadCV(cvFile)
         if (!uploadResult.success || !uploadResult.url) {
           const uploadError = uploadResult.error || 'CV upload failed.'
-          console.error('[ApplyForm] CV upload failed', {
-            uploadError,
-            uploadResult,
-          })
           setError(uploadError)
           showError(uploadError)
           setSubmitting(false)
           return
         }
-
-        console.info('[ApplyForm] CV upload succeeded', {
-          uploadedFileName: uploadResult.fileName,
-          uploadedKey: uploadResult.key,
-        })
         cvFileUrl = uploadResult.url
         cvFileName = uploadResult.fileName
         cvFileKey = uploadResult.key
@@ -321,11 +361,19 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-accent-bg-faint text-accent-purple border border-accent-bg-medium uppercase tracking-wider">
+              Applying for
+            </span>
+            <span className="text-xs text-text-secondary font-mono">
+              ID: {initialJobId?.slice(0, 8)}...
+            </span>
+          </div>
           <h1 className="text-2xl font-semibold text-text-primary mb-2">
-            Candidate Application Form
+            {jobTitle}
           </h1>
           <p className="text-sm text-text-secondary">
-            Complete this form to apply for a job posting. Fields marked with * are required.
+            Complete this form to apply for this role. Fields marked with * are required.
           </p>
         </div>
 
@@ -333,21 +381,8 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
           <AuthError message={error} />
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Job ID *
-              </label>
-              <div className="relative">
-                <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
-                <input
-                  type="text"
-                  value={form.jobId}
-                  onChange={(e) => updateField('jobId', e.target.value)}
-                  placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded border outline-none bg-theme-input text-text-primary border-theme-border-input focus:border-accent-purple focus:bg-theme-card placeholder:text-text-secondary/50 transition-colors"
-                />
-              </div>
-            </div>
+            {/* Job ID is now handled automatically */}
+            <input type="hidden" value={form.jobId} name="jobId" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -483,22 +518,52 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
               </div>
             </div>
 
-            <div className="rounded-lg border p-4 bg-theme-input border-theme-border">
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            <div className="rounded-lg border p-5 bg-theme-input border-theme-border shadow-sm">
+              <label className="block text-sm font-medium text-text-secondary mb-3">
                 Upload CV (PDF, DOC, DOCX, PNG, JPG/JPEG, WEBP, BMP, TIFF — max 10MB)
               </label>
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.tif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
-                  onChange={(e) => setCvFile(e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:text-white file:bg-accent-purple hover:file:bg-accent-purple-hover file:cursor-pointer cursor-pointer"
-                />
-                <div className="inline-flex items-center gap-2 text-xs text-text-secondary">
-                  <Upload size={13} className="text-accent-purple" />
-                  <span className="break-all">{selectedFileLabel}</span>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="relative flex-1 w-full">
+                  <input
+                    type="file"
+                    id="cv-upload"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.tif"
+                    onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="cv-upload"
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded border border-theme-border-input bg-theme-card text-text-primary hover:border-accent-purple transition-all cursor-pointer shadow-sm"
+                  >
+                    <FileText size={16} className="text-accent-purple" />
+                    {cvFile ? cvFile.name : 'Select CV File'}
+                  </label>
                 </div>
+                
+                <button
+                  type="button"
+                  onClick={handleUploadCV}
+                  disabled={!cvFile || cvUploading || !!uploadedCv}
+                  className="whitespace-nowrap px-6 py-2.5 text-sm font-semibold text-white rounded bg-accent-purple hover:bg-accent-purple-hover disabled:bg-disabled disabled:cursor-not-allowed transition-all cursor-pointer shadow-md flex items-center gap-2"
+                >
+                  {cvUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                  {uploadedCv ? 'CV Ingested' : cvUploading ? 'Ingesting...' : 'Ingest CV'}
+                </button>
               </div>
+              
+              {uploadedCv && (
+                <div className="mt-3 flex items-center gap-2 text-xs text-success bg-success-bg border border-success/20 px-3 py-2 rounded">
+                  <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  Successfully ingested: {uploadedCv.fileName}
+                </div>
+              )}
+              
+              {!uploadedCv && !cvUploading && (
+                <p className="mt-2 text-[0.7rem] text-text-secondary flex items-center gap-1.5 opacity-70">
+                  <Upload size={10} />
+                  Choose a file and click "Ingest CV" to process your background automatically.
+                </p>
+              )}
             </div>
 
             <button

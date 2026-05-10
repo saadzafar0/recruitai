@@ -1,19 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Bell, Camera, CheckCircle, Code2, Globe, Layout, LogOut, LucideIcon, Mic, Settings } from 'lucide-react'
+import { Bell, LogOut, Search, Settings } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { ThemeToggle, ThemeToggleMobile } from '@/components/ui/theme-toggle'
-
-type UserTaskStatus = 'not_started' | 'in_progress' | 'completed'
+import CandidateAssessmentSection from '@/components/candidate/CandidateAssessmentSection'
+import { useCandidateSummary } from '@/hooks/useCandidateSummary'
 
 export default function UserPage() {
   const router = useRouter()
   const { user, loading, signOut } = useAuth()
   const { showSuccess, showError } = useToast()
-  const [micAvailable, setMicAvailable] = useState(true)
+  const { summary, loading: summaryLoading } = useCandidateSummary()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,9 +47,10 @@ export default function UserPage() {
 
   if (!user || user.role === 'recruiter') return null
 
-  const voiceStatus: UserTaskStatus = 'not_started'
-  const codingStatus: UserTaskStatus = 'not_started'
-  const designStatus: UserTaskStatus = 'not_started'
+  const appliedJobs = summary?.appliedJobs ?? 0
+  const inProgress = summary?.inProgress ?? 0
+  const completed = summary?.completed ?? 0
+  const hasAppliedJobs = appliedJobs > 0
 
   return (
     <div className="min-h-screen bg-theme-bg transition-colors">
@@ -82,50 +83,47 @@ export default function UserPage() {
             Welcome back, {user.firstName}!
           </h1>
           <p className="text-sm text-text-secondary">
-            Applied for: <span className="font-medium text-text-primary">Senior Frontend Engineer</span>
+            Track your applications and assessments.
           </p>
         </div>
 
         <div className="rounded-lg p-5 border mb-8 bg-theme-card border-theme-border shadow-theme-card transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[0.9375rem] font-semibold text-text-primary">System Check</h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-[0.9375rem] font-semibold text-text-primary">Your Progress</h2>
+              <p className="text-sm text-text-secondary mt-1">
+                {summaryLoading ? 'Fetching your latest stats...' : 'Keep your momentum going.'}
+              </p>
+            </div>
             <button
-              onClick={() => setMicAvailable((current) => !current)}
-              className="text-xs underline cursor-pointer transition-colors text-text-secondary hover:text-accent-purple"
+              type="button"
+              onClick={() => router.push('/candidate/jobs')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium bg-accent-purple text-white hover:bg-accent-purple-hover transition-colors cursor-pointer"
             >
-              Toggle mic (demo)
+              <Search size={16} />
+              Search jobs
             </button>
           </div>
 
-          <div className="space-y-2">
-            <HardwareStatus icon={Mic} label="Microphone" ok={micAvailable} />
-            <HardwareStatus icon={Globe} label="Browser Compatibility" ok={true} />
-            <HardwareStatus icon={Camera} label="Camera" ok={true} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+            <StatCard label="Applied jobs" value={appliedJobs} />
+            <StatCard label="In progress" value={inProgress} />
+            <StatCard label="Completed" value={completed} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <AssessmentCard
-            title="Voice Interview"
-            icon={Mic}
-            status={voiceStatus}
-            disabled={!micAvailable}
-            disabledReason="Microphone not detected"
-            onClick={() => router.push('/interview/voice')}
-          />
-          <AssessmentCard
-            title="Coding Test"
-            icon={Code2}
-            status={codingStatus}
-            onClick={() => router.push('/interview/coding')}
-          />
-          <AssessmentCard
-            title="System Design"
-            icon={Layout}
-            status={designStatus}
-            onClick={() => router.push('/interview/design')}
-          />
-        </div>
+        {hasAppliedJobs ? (
+          <div className="mb-8">
+            <CandidateAssessmentSection />
+          </div>
+        ) : (
+          <div className="rounded-lg p-5 border mb-8 bg-theme-card border-theme-border shadow-theme-card transition-colors">
+            <h2 className="text-[0.9375rem] font-semibold text-text-primary mb-1">No active applications yet</h2>
+            <p className="text-sm text-text-secondary">
+              Apply to a role to unlock the voice interview, coding round, and system design tasks.
+            </p>
+          </div>
+        )}
 
         <div className="rounded-lg p-5 border bg-theme-card border-theme-border shadow-theme-card transition-colors">
           <div className="flex items-center justify-between">
@@ -157,96 +155,11 @@ export default function UserPage() {
   )
 }
 
-function HardwareStatus({
-  icon: Icon,
-  label,
-  ok,
-}: {
-  icon: LucideIcon
-  label: string
-  ok: boolean
-}) {
+function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-theme-border bg-theme-input transition-colors">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded flex items-center justify-center bg-theme-elevated">
-          <Icon size={18} className="text-accent-purple" />
-        </div>
-        <span className="text-sm text-text-primary">{label}</span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {ok ? (
-          <CheckCircle size={16} className="text-accent-green" />
-        ) : (
-          <AlertCircle size={16} className="text-accent-red" />
-        )}
-        <span className={`text-xs ${ok ? 'text-accent-green' : 'text-accent-red'}`}>
-          {ok ? 'OK' : 'Not available'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function AssessmentCard({
-  title,
-  icon: Icon,
-  status,
-  disabled,
-  disabledReason,
-  onClick,
-}: {
-  title: string
-  icon: LucideIcon
-  status: UserTaskStatus
-  disabled?: boolean
-  disabledReason?: string
-  onClick: () => void
-}) {
-  const config = {
-    not_started: {
-      badge: 'Not started',
-      badgeClass: 'bg-theme-input text-text-secondary',
-      buttonClass: 'bg-accent-purple text-white hover:bg-accent-purple-hover',
-      buttonLabel: 'Begin',
-    },
-    in_progress: {
-      badge: 'In progress',
-      badgeClass: 'bg-accent-yellow/10 text-accent-yellow',
-      buttonClass: 'bg-accent-purple text-white hover:bg-accent-purple-hover',
-      buttonLabel: 'Continue',
-    },
-    completed: {
-      badge: 'Completed',
-      badgeClass: 'bg-accent-green/10 text-accent-green',
-      buttonClass: 'bg-theme-input text-text-secondary border border-theme-border',
-      buttonLabel: 'View',
-    },
-  }[status]
-
-  return (
-    <div className="rounded-lg border bg-theme-card border-theme-border shadow-theme-card transition-colors p-5">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary mb-1">{title}</h3>
-          <span className={`inline-flex text-xs px-2 py-0.5 rounded ${config.badgeClass}`}>
-            {disabled ? disabledReason || 'Disabled' : config.badge}
-          </span>
-        </div>
-        <div className="w-10 h-10 rounded flex items-center justify-center bg-theme-elevated">
-          <Icon size={18} className="text-accent-purple" />
-        </div>
-      </div>
-
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onClick}
-        className={`w-full py-2.5 text-sm font-medium rounded transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${config.buttonClass}`}
-      >
-        {config.buttonLabel}
-      </button>
+    <div className="rounded-lg border bg-theme-input border-theme-border px-4 py-3">
+      <p className="text-xs uppercase tracking-wide text-text-secondary">{label}</p>
+      <p className="text-2xl font-semibold text-text-primary mt-1">{value}</p>
     </div>
   )
 }

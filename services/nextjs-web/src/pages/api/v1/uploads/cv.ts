@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { uploadFile, isValidCVType, getFileExtension, getMimeTypeFromFileName } from '../../../../lib/s3'
+import { cvProcessingQueue } from '../../../../lib/bull'
 
 type UploadResponse = {
   success: boolean
@@ -83,6 +84,26 @@ export default async function handler(
         success: false,
         error: result.error || 'Upload failed',
       })
+    }
+
+    // Enqueue for CV parsing ingestion
+    try {
+      await cvProcessingQueue.add(
+        'parse-cv',
+        {
+          cvFileUrl: result.url,
+          cvFileName: finalFileName,
+          s3Key: result.key,
+          candidateProfileId: 'ingestion-pending', // Placeholder until application is submitted
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 1000 },
+          removeOnComplete: true,
+        }
+      )
+    } catch (queueError) {
+      console.error('[CV Upload API] BullMQ enqueue failed', queueError)
     }
 
     return res.status(201).json({
