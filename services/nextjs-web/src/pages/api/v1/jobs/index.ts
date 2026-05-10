@@ -45,14 +45,6 @@ export default async function handler(
     return res.status(403).json({ error: 'Only recruiters can manage job postings' })
   }
 
-  // Check if user has an organization
-  if (!profile.organization_id) {
-    return res.status(400).json({
-      error: 'NO_ORGANIZATION',
-      message: 'Please create an organization before posting jobs'
-    })
-  }
-
   switch (req.method) {
     case 'GET':
       return handleGet(req, res, profile as { id: string; organization_id: string })
@@ -73,6 +65,8 @@ async function handleGet(
     return res.status(500).json({ error: 'Server configuration error' })
   }
 
+  res.setHeader('Cache-Control', 'no-store, max-age=0')
+
   const {
     page = '1',
     limit = '10',
@@ -80,6 +74,7 @@ async function handleGet(
     status,
     employment_type,
     work_mode,
+    organization_id,
     sort_field = 'created_at',
     sort_direction = 'desc',
     created_after,
@@ -90,11 +85,45 @@ async function handleGet(
   const limitNum = parseInt(limit as string, 10)
   const offset = (pageNum - 1) * limitNum
 
+  // Determine allowed organizations (primary org + memberships)
+  const allowedOrgIds = new Set<string>()
+  if (profile.organization_id) {
+    allowedOrgIds.add(profile.organization_id)
+  }
+
+  const { data: memberships } = await supabaseAdmin
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', profile.id)
+
+  for (const row of memberships || []) {
+    const orgId = (row as { organization_id?: string }).organization_id
+    if (orgId) allowedOrgIds.add(orgId)
+  }
+
+  if (allowedOrgIds.size === 0) {
+    return res.status(400).json({
+      error: 'NO_ORGANIZATION',
+      message: 'Please create an organization before posting jobs',
+    })
+  }
+
+  const requestedOrgId = typeof organization_id === 'string' ? organization_id : null
+
+  if (requestedOrgId && !allowedOrgIds.has(requestedOrgId)) {
+    return res.status(403).json({ error: 'You do not have access to this organization' })
+  }
+
   // Build query - use job_skills table (not job_posting_skills)
   let query = supabaseAdmin
     .from('job_postings')
     .select('*, job_skills(skill_name)', { count: 'exact' })
-    .eq('organization_id', profile.organization_id)
+
+  if (requestedOrgId) {
+    query = query.eq('organization_id', requestedOrgId)
+  } else {
+    query = query.in('organization_id', Array.from(allowedOrgIds))
+  }
 
   // Apply filters
   if (search) {
@@ -174,15 +203,47 @@ async function handlePost(
     return res.status(400).json({ error: 'Title and description are required' })
   }
 
+  // Determine allowed organizations (primary org + memberships)
+  const allowedOrgIds = new Set<string>()
+  if (profile.organization_id) {
+    allowedOrgIds.add(profile.organization_id)
+  }
+
+  const { data: memberships } = await supabaseAdmin
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', profile.id)
+
+  for (const row of memberships || []) {
+    const orgId = (row as { organization_id?: string }).organization_id
+    if (orgId) allowedOrgIds.add(orgId)
+  }
+
+  if (allowedOrgIds.size === 0) {
+    return res.status(400).json({
+      error: 'NO_ORGANIZATION',
+      message: 'Please create an organization before posting jobs',
+    })
+  }
+
+  const requestedOrgId = body.organization_id
+  const effectiveOrgId = requestedOrgId && allowedOrgIds.has(requestedOrgId)
+    ? requestedOrgId
+    : Array.from(allowedOrgIds)[0]
+
+  if (requestedOrgId && !allowedOrgIds.has(requestedOrgId)) {
+    return res.status(403).json({ error: 'You do not have access to this organization' })
+  }
+
   // Create the job posting
-  const { skills, ...jobData } = body
+  const { skills, organization_id: _orgId, ...jobData } = body
 
   const { data: job, error } = await supabaseAdmin
     .from('job_postings')
     .insert({
       ...jobData,
       created_by: profile.id,
-      organization_id: profile.organization_id,
+      organization_id: effectiveOrgId,
       status: body.status || 'draft',
     })
     .select()

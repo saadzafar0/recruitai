@@ -20,6 +20,7 @@ export interface UseJobsFilters {
   status?: JobStatus | JobStatus[]
   employment_type?: EmploymentType
   work_mode?: WorkMode
+  organization_id?: string
   created_after?: string
   created_before?: string
 }
@@ -72,6 +73,7 @@ function buildJobsCacheKey(options?: UseJobsOptions): string {
       status: options?.filters?.status ?? '',
       employment_type: options?.filters?.employment_type ?? '',
       work_mode: options?.filters?.work_mode ?? '',
+      organization_id: options?.filters?.organization_id ?? '',
       created_after: options?.filters?.created_after ?? '',
       created_before: options?.filters?.created_before ?? '',
     },
@@ -125,6 +127,7 @@ export function useJobs(initialOptions?: UseJobsOptions): UseJobsReturn {
       }
       if (opts.filters?.employment_type) params.set('employment_type', opts.filters.employment_type)
       if (opts.filters?.work_mode) params.set('work_mode', opts.filters.work_mode)
+      if (opts.filters?.organization_id) params.set('organization_id', opts.filters.organization_id)
       if (opts.filters?.created_after) params.set('created_after', opts.filters.created_after)
       if (opts.filters?.created_before) params.set('created_before', opts.filters.created_before)
       if (opts.sort?.field) params.set('sort_field', opts.sort.field)
@@ -132,6 +135,7 @@ export function useJobs(initialOptions?: UseJobsOptions): UseJobsReturn {
 
       const response = await fetch(`/api/v1/jobs?${params.toString()}`, {
         headers: getAuthHeaders(),
+        cache: 'no-store',
       })
 
       if (!response.ok) {

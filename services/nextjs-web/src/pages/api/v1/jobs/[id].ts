@@ -52,7 +52,7 @@ export default async function handler(
     return res.status(403).json({ error: 'Only recruiters can manage job postings' })
   }
 
-  // Verify the job belongs to the user's organization
+  // Verify the job belongs to one of the user's organizations
   const { data: existingJob, error: fetchError } = await supabaseAdmin
     .from('job_postings')
     .select('id, organization_id')
@@ -63,8 +63,25 @@ export default async function handler(
     return res.status(404).json({ error: 'Job posting not found' })
   }
 
-  if (existingJob.organization_id !== profile.organization_id && profile.role !== 'admin') {
-    return res.status(403).json({ error: 'You do not have permission to access this job posting' })
+  if (profile.role !== 'admin') {
+    const allowedOrgIds = new Set<string>()
+    if (profile.organization_id) {
+      allowedOrgIds.add(profile.organization_id)
+    }
+
+    const { data: memberships } = await supabaseAdmin
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', profile.id)
+
+    for (const row of memberships || []) {
+      const orgId = (row as { organization_id?: string }).organization_id
+      if (orgId) allowedOrgIds.add(orgId)
+    }
+
+    if (!allowedOrgIds.has(existingJob.organization_id)) {
+      return res.status(403).json({ error: 'You do not have permission to access this job posting' })
+    }
   }
 
   switch (req.method) {
@@ -88,6 +105,8 @@ async function handleGet(
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Server configuration error' })
   }
+
+  res.setHeader('Cache-Control', 'no-store, max-age=0')
 
   const { data: job, error } = await supabaseAdmin
     .from('job_postings')
@@ -121,6 +140,8 @@ async function handlePut(
 
   // Remove id from update data if present
   delete (updateData as any).id
+  // Prevent organization reassignment via update
+  delete (updateData as any).organization_id
 
   // Handle status changes
   if (updateData.status === 'published' && !updateData.published_at) {

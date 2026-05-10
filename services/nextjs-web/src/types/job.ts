@@ -45,9 +45,11 @@ export interface JobPosting {
   // Computed/joined fields
   skills?: string[]
   applications_count?: number
+  views_count?: number
 }
 
 export interface JobPostingCreate {
+  organization_id?: string
   title: string
   description: string
   responsibilities?: string

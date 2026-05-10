@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Briefcase, Users, Mic, Award, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useJobs } from '@/hooks/useJobs'
 import type { JobPosting } from '@/types/job'
 
@@ -37,81 +36,47 @@ export default function RecruiterDashboard() {
   }, [jobs])
 
   const activeJobs = jobs.filter((j) => j.status === 'published').length
+  const closedJobs = jobs.filter((j) => j.status === 'closed').length
 
-  const kpiCards = [
-    {
-      label: 'Active Job Postings',
-      value: String(activeJobs),
-      icon: Briefcase,
-      change: `${totalJobs} total`,
-      href: '/recruiter/jobs',
-      active: true,
-    },
-    {
-      label: 'Total Applicants',
-      value: '—',
-      icon: Users,
-      change: 'Coming soon',
-      href: '#',
-      active: false,
-    },
-    {
-      label: 'Interviews Completed',
-      value: '—',
-      icon: Mic,
-      change: 'Coming soon',
-      href: '#',
-      active: false,
-    },
-    {
-      label: 'Candidates Ranked',
-      value: '—',
-      icon: Award,
-      change: 'Coming soon',
-      href: '#',
-      active: false,
-    },
-  ]
+  const renderJobCard = (job: JobPosting) => (
+    <div
+      key={job.id}
+      className="p-4 mb-4 rounded-lg border bg-theme-card hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+      onClick={() => router.push(`/recruiter/jobs/${job.id}`)}
+    >
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-text-primary">{job.title}</h3>
+          <p className="text-sm text-text-secondary">
+            Deadline: {job.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-[1.375rem] font-semibold text-text-primary">
-          Recruitment Overview
-        </h1>
-        <p className="text-sm mt-0.5 text-text-secondary">
-          Here&apos;s what&apos;s happening with your hiring pipeline.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-[1.375rem] font-semibold text-text-primary">Recruiter Dashboard</h1>
+          <p className="text-sm mt-0.5 text-text-secondary">Overview of your job postings and activity.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-        {kpiCards.map(({ label, value, icon: Icon, change, href, active }) => (
-          <Link
-            key={label}
-            href={active ? href : '#'}
-            className={`
-              rounded-lg p-4 sm:p-5 border border-t-[3px] border-t-accent-purple
-              bg-theme-card border-theme-border shadow-theme-card
-              transition-all duration-200 ease-out
-              hover:shadow-lg hover:-translate-y-[2px]
-              hover:bg-accent-purple/5 dark:hover:bg-accent-purple/10
-              ${active ? 'cursor-pointer' : 'cursor-default opacity-75'}
-            `}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <p className="text-xs mb-1 text-text-secondary">{label}</p>
-                <p className="text-2xl sm:text-3xl font-semibold text-text-primary leading-none">
-                  {jobsLoading && active && jobs.length === 0 ? '...' : value}
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded flex items-center justify-center bg-theme-elevated">
-                <Icon size={16} className="text-accent-purple" />
-              </div>
-            </div>
-            <p className="text-xs text-accent-green">{change}</p>
-          </Link>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="p-4 rounded-lg border bg-theme-card">
+          <h3 className="text-lg font-semibold text-text-primary">Total Jobs</h3>
+          <p className="text-2xl font-bold text-accent-purple">{totalJobs}</p>
+        </div>
+        <div className="p-4 rounded-lg border bg-theme-card">
+          <h3 className="text-lg font-semibold text-text-primary">Active Jobs</h3>
+          <p className="text-2xl font-bold text-accent-purple">{activeJobs}</p>
+        </div>
+        <div className="p-4 rounded-lg border bg-theme-card">
+          <h3 className="text-lg font-semibold text-text-primary">Closed Jobs</h3>
+          <p className="text-2xl font-bold text-accent-purple">{closedJobs}</p>
+        </div>
       </div>
 
       <div className="rounded-lg border bg-theme-card border-theme-border shadow-theme-card transition-colors">
@@ -194,3 +159,4 @@ function formatDate(iso: string) {
     return iso
   }
 }
+

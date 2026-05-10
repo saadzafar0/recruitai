@@ -51,6 +51,14 @@ const initialFormState: JobPostingCreate = {
   salary_currency: 'PKR',
   application_deadline: '',
   openings_count: 1,
+  cv_parsing_enabled: true,
+  voice_interview_enabled: true,
+  coding_assessment_enabled: true,
+  system_design_enabled: false,
+  weight_cv: 25,
+  weight_voice: 35,
+  weight_coding: 30,
+  weight_system_design: 10,
   status: 'draft',
   skills: [],
 }
@@ -78,9 +86,17 @@ export function JobModal({ isOpen, job, onClose, onSave, loading }: JobModalProp
         experience_max_years: job.experience_max_years,
         salary_min: job.salary_min,
         salary_max: job.salary_max,
-        salary_currency: job.salary_currency,
+        salary_currency: job.salary_currency || 'PKR',
         application_deadline: job.application_deadline?.split('T')[0] || '',
         openings_count: job.openings_count,
+        cv_parsing_enabled: job.cv_parsing_enabled ?? true,
+        voice_interview_enabled: job.voice_interview_enabled ?? true,
+        coding_assessment_enabled: job.coding_assessment_enabled ?? true,
+        system_design_enabled: job.system_design_enabled ?? false,
+        weight_cv: job.weight_cv ?? 25,
+        weight_voice: job.weight_voice ?? 35,
+        weight_coding: job.weight_coding ?? 30,
+        weight_system_design: job.weight_system_design ?? 10,
         status: job.status,
         skills: job.skills || [],
       })
@@ -264,6 +280,42 @@ export function JobModal({ isOpen, job, onClose, onSave, loading }: JobModalProp
                 />
               </div>
 
+              {/* Experience Min */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Min Experience (years)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={form.experience_min_years}
+                  onChange={(e) => updateField('experience_min_years', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+
+              {/* Experience Max */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Max Experience (years)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={form.experience_max_years ?? ''}
+                  onChange={(e) => updateField('experience_max_years', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+
               {/* Application Deadline */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
@@ -315,6 +367,74 @@ export function JobModal({ isOpen, job, onClose, onSave, loading }: JobModalProp
                     transition-colors"
                 />
               </div>
+
+              {/* Salary Min */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Salary Min
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.salary_min ?? ''}
+                  onChange={(e) => updateField('salary_min', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+
+              {/* Salary Max */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Salary Max
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.salary_max ?? ''}
+                  onChange={(e) => updateField('salary_max', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+
+              {/* Salary Currency */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Salary Currency
+                </label>
+                <input
+                  type="text"
+                  value={form.salary_currency}
+                  onChange={(e) => updateField('salary_currency', e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Responsibilities */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Responsibilities
+              </label>
+              <textarea
+                value={form.responsibilities}
+                onChange={(e) => updateField('responsibilities', e.target.value)}
+                placeholder="Outline key responsibilities..."
+                rows={3}
+                className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none resize-none
+                  bg-theme-input text-text-primary border-theme-border-input
+                  focus:border-accent-purple focus:bg-theme-card
+                  placeholder:text-text-secondary/50
+                  transition-colors"
+              />
             </div>
 
             {/* Skills */}
@@ -365,6 +485,116 @@ export function JobModal({ isOpen, job, onClose, onSave, loading }: JobModalProp
                   placeholder:text-text-secondary/50
                   transition-colors"
               />
+            </div>
+
+            {/* Benefits */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Benefits
+              </label>
+              <textarea
+                value={form.benefits}
+                onChange={(e) => updateField('benefits', e.target.value)}
+                placeholder="List benefits and perks..."
+                rows={3}
+                className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none resize-none
+                  bg-theme-input text-text-primary border-theme-border-input
+                  focus:border-accent-purple focus:bg-theme-card
+                  placeholder:text-text-secondary/50
+                  transition-colors"
+              />
+            </div>
+
+            {/* Assessment Toggles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex items-center justify-between px-3 py-2.5 rounded-lg border bg-theme-input border-theme-border-input">
+                <span className="text-sm text-text-secondary">CV Parsing</span>
+                <input
+                  type="checkbox"
+                  checked={!!form.cv_parsing_enabled}
+                  onChange={(e) => updateField('cv_parsing_enabled', e.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between px-3 py-2.5 rounded-lg border bg-theme-input border-theme-border-input">
+                <span className="text-sm text-text-secondary">Voice Interview</span>
+                <input
+                  type="checkbox"
+                  checked={!!form.voice_interview_enabled}
+                  onChange={(e) => updateField('voice_interview_enabled', e.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between px-3 py-2.5 rounded-lg border bg-theme-input border-theme-border-input">
+                <span className="text-sm text-text-secondary">Coding Assessment</span>
+                <input
+                  type="checkbox"
+                  checked={!!form.coding_assessment_enabled}
+                  onChange={(e) => updateField('coding_assessment_enabled', e.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between px-3 py-2.5 rounded-lg border bg-theme-input border-theme-border-input">
+                <span className="text-sm text-text-secondary">System Design</span>
+                <input
+                  type="checkbox"
+                  checked={!!form.system_design_enabled}
+                  onChange={(e) => updateField('system_design_enabled', e.target.checked)}
+                />
+              </label>
+            </div>
+
+            {/* Weights */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">Weight CV</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.weight_cv ?? 0}
+                  onChange={(e) => updateField('weight_cv', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">Weight Voice</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.weight_voice ?? 0}
+                  onChange={(e) => updateField('weight_voice', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">Weight Coding</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.weight_coding ?? 0}
+                  onChange={(e) => updateField('weight_coding', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">Weight System Design</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.weight_system_design ?? 0}
+                  onChange={(e) => updateField('weight_system_design', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border outline-none
+                    bg-theme-input text-text-primary border-theme-border-input
+                    focus:border-accent-purple focus:bg-theme-card
+                    transition-colors"
+                />
+              </div>
             </div>
           </div>
 
