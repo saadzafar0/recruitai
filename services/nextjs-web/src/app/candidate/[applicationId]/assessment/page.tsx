@@ -11,7 +11,6 @@ import {
   AlertCircle, 
   Globe, 
   Camera,
-  Play,
   type LucideIcon 
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -256,7 +255,6 @@ function AssessmentCard({
         onClick={onClick}
         className={`w-full py-2.5 text-xs font-bold rounded transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2 ${config.buttonClass}`}
       >
-        {status === 'not_started' && <Play size={12} fill="currentColor" />}
         {config.buttonLabel}
       </button>
     </div>

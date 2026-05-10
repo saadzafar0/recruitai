@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, LogOut, Search, Settings, ChevronRight, Play, AlertCircle } from 'lucide-react'
+import { Bell, LogOut, Search, Settings, ChevronRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { ThemeToggle, ThemeToggleMobile } from '@/components/ui/theme-toggle'
@@ -125,10 +125,6 @@ export default function UserPage() {
         {hasAppliedJobs ? (
           <div className="mb-8">
             <div className="rounded-lg p-6 border bg-theme-card border-theme-border shadow-theme-card transition-all overflow-hidden relative group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Play size={120} className="text-accent-purple" />
-              </div>
-              
               <div className="relative z-10">
                 <h2 className="text-[1.1rem] font-semibold text-text-primary mb-2">Proceed to Evaluations</h2>
                 <p className="text-sm text-text-secondary mb-6 max-w-xl">
