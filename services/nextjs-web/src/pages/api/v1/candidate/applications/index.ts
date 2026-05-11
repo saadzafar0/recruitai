@@ -9,6 +9,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Server is not configured with SUPABASE_SERVICE_ROLE_KEY' })
+  }
+
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized' })

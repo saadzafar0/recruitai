@@ -99,6 +99,10 @@ export default async function handler(
     assessmentId = createdAssessment.id
   }
 
+  if (!assessmentId) {
+    return res.status(500).json({ success: false, error: 'Assessment id missing' })
+  }
+
   const { data: createdResponse, error: responseError } = await supabaseAdmin
     .from('system_design_responses')
     .insert({

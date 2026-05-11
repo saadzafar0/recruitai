@@ -58,7 +58,7 @@ export default async function handler(
 
 async function handleGet(
   req: NextApiRequest,
-  res: NextApiResponse<JobPostingsResponse | { error: string }>,
+  res: NextApiResponse<JobPostingsResponse | { error: string; message?: string }>,
   profile: { id: string; organization_id: string }
 ) {
   if (!supabaseAdmin) {
@@ -190,7 +190,7 @@ async function handleGet(
 
 async function handlePost(
   req: NextApiRequest,
-  res: NextApiResponse<JobPosting | { error: string }>,
+  res: NextApiResponse<JobPosting | { error: string; message?: string }>,
   profile: { id: string; organization_id: string }
 ) {
   if (!supabaseAdmin) {

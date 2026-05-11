@@ -13,6 +13,11 @@ import { useToast } from '@/context/ToastContext'
 import { INDUSTRIES, SIZE_RANGES } from '@/types/organization'
 import type { OrganizationCreate, OrganizationUpdate } from '@/types/organization'
 
+function trimOrUndefined(value: string | undefined): string | undefined {
+  const t = value?.trim()
+  return t ? t : undefined
+}
+
 export default function OrganizationPage() {
   const router = useRouter()
   const { organizations, loading, error, createOrganization, updateOrganization } = useOrganization()
@@ -88,13 +93,13 @@ export default function OrganizationPage() {
     try {
       const payload = {
         ...formData,
-        logo_url: formData.logo_url.trim() ? formData.logo_url.trim() : undefined,
-        website_url: formData.website_url.trim() ? formData.website_url.trim() : undefined,
-        industry: formData.industry.trim() ? formData.industry.trim() : undefined,
-        size_range: formData.size_range.trim() ? formData.size_range.trim() : undefined,
-        country: formData.country.trim() ? formData.country.trim() : undefined,
-        city: formData.city.trim() ? formData.city.trim() : undefined,
-        ats_provider: formData.ats_provider.trim() ? formData.ats_provider.trim() : undefined,
+        logo_url: trimOrUndefined(formData.logo_url),
+        website_url: trimOrUndefined(formData.website_url),
+        industry: trimOrUndefined(formData.industry),
+        size_range: trimOrUndefined(formData.size_range),
+        country: trimOrUndefined(formData.country),
+        city: trimOrUndefined(formData.city),
+        ats_provider: trimOrUndefined(formData.ats_provider),
       }
 
       if (selectedOrganizationId) {
