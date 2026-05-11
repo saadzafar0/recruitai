@@ -1,6 +1,6 @@
 # GitHub Actions → EC2 environment variables
 
-On each deploy, [`deploy-ec2.yml`](../.github/workflows/deploy-ec2.yml) writes **`/app/.env`** on the target instance from **two multiline repository secrets**, then runs `docker compose pull` / `up`.
+On each deploy, [`deploy-ec2.yml`](../.github/workflows/deploy-ec2.yml) writes **`/app/.env`** on the target instance from **two multiline repository secrets**, generates **`docker-compose.yml`** plus **`Caddyfile`** on the **web** host (hostname from repository variable **`APP_DOMAIN`**), then runs `docker compose pull` / `up`.
 
 | GitHub secret | Where it is written | Used by |
 |---------------|---------------------|---------|
@@ -8,6 +8,8 @@ On each deploy, [`deploy-ec2.yml`](../.github/workflows/deploy-ec2.yml) writes *
 | **`EC2_WORKERS_ENV_FILE`** | Workers EC2: **`/app/.env`** → `executor`, `evaluator`, `cv-parser` | All three workers (one shared file) |
 
 Create each secret in **Settings → Secrets and variables → Actions → New repository secret**. Paste the **entire** `.env` text (same format as `KEY=value` lines, one per line).
+
+**Web TLS:** Set repository **variable** **`APP_DOMAIN`** to the public hostname (e.g. `recruit.example.com`). The deploy workflow writes **`Caddyfile`** with that name; point DNS **A** (or **AAAA**) at the web EC2 **before** expecting Let’s Encrypt to succeed.
 
 **Non-sensitive tuning** (model names, queue names, URLs without secrets) can live in those files too, or you can move them to **Variables** later and concatenate in the workflow—this doc lists names only; use **Secrets** for anything sensitive.
 

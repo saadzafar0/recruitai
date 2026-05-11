@@ -8,7 +8,7 @@ This document is the **current** deployment plan: **GitHub → GitHub Actions �
 
 | Piece | Role |
 |--------|------|
-| **EC2 #1** (`t3.small`) | Runs **Next.js** only. **Port 80 → 3000**. Public A record to this instance’s IP. |
+| **EC2 #1** (`t3.small`) | Runs **Next.js** + **Caddy** (Compose). **Caddy** listens on **80/443** (HTTPS via Let’s Encrypt); **Next** is internal **:3000** only. Point DNS (**`APP_DOMAIN`**, e.g. `recruit.example.com`) at this instance’s public IP. |
 | **EC2 #2** (`t3.medium`) | Runs **executor**, **evaluator**, **cv-parser** only. No inbound public app traffic. |
 | **Redis** | **Hosted outside** (ElastiCache, Redis Cloud, Upstash, etc.). Use the **same** **`REDIS_URL`** on web and workers. No Redis container in Compose. |
 | **CI/CD** | **GitHub Actions** build/push images to **Docker Hub**, then **SSH** to each EC2 and `docker compose pull && up -d`. |
@@ -30,7 +30,7 @@ Dockerfiles live under **`services/`** (not `apps/`):
 
 Use the same image names in **`docker-compose.yml`** on each server as you push from CI.
 
-**CI / EC2 layout:** The workflow **[`.github/workflows/deploy-ec2.yml`](.github/workflows/deploy-ec2.yml)** on every deploy (1) ensures **`/app`** exists and is owned by the SSH user, (2) writes **`/app/docker-compose.yml`** from **`DOCKERHUB_USERNAME`** plus the fixed service names above, (3) uploads **`EC2_WEB_ENV_FILE`** / **`EC2_WORKERS_ENV_FILE`** as **`web.env`** / **`workers.env`**, then renames to **`/app/.env`**, (4) runs **`docker compose pull`** / **`up`**. You do not need to create **`/app`** or copy **`docker-compose.yml`** by hand on new instances. Full env checklist: **[`docs/github-actions-environment.md`](github-actions-environment.md)**.
+**CI / EC2 layout:** The workflow **[`.github/workflows/deploy-ec2.yml`](.github/workflows/deploy-ec2.yml)** on every deploy (1) ensures **`/app`** exists and is owned by the SSH user, (2) writes **`/app/docker-compose.yml`** and **`/app/Caddyfile`** from **`DOCKERHUB_USERNAME`** and repository variable **`APP_DOMAIN`** (hostname for TLS), (3) uploads **`EC2_WEB_ENV_FILE`** / **`EC2_WORKERS_ENV_FILE`** as **`web.env`** / **`workers.env`**, then renames to **`/app/.env`**, (4) runs **`docker compose pull`** / **`up`** (web stack: **`web`** + **`caddy`**). Open **80** and **443** (TCP + **443 UDP** for HTTP/3) on the web instance security group. Full env checklist: **[`docs/github-actions-environment.md`](github-actions-environment.md)**.
 
 **Local:** Use **`services/<name>/.env`** and root **`docker-compose.yml`** as today.
 
@@ -57,6 +57,7 @@ Generate a **Docker Hub access token** for CI (`DOCKERHUB_TOKEN`).
 |------|------|---------|
 | `DOCKERHUB_USERNAME` | Variable (recommended) or secret | Docker Hub user/org namespace |
 | `DOCKERHUB_TOKEN` | Secret | Docker Hub access token |
+| `APP_DOMAIN` | Variable | Hostname for the web app (e.g. `recruit.example.com`); used in **`Caddyfile`** for HTTPS |
 | `WEB_EC2_IP` | Secret | Public IP or DNS of **web** EC2 (SSH/SCP) |
 | `WORKERS_EC2_IP` | Secret | Public IP or DNS of **workers** EC2 |
 | `SSH_KEY` | Secret | Private key for the EC2 key pair (PEM) |
@@ -78,7 +79,7 @@ On each deploy, Actions **overwrites** **`/app/.env`** and **`/app/docker-compos
 One-time on each instance (example for Amazon Linux):
 
 - Install **Docker** and the **Docker Compose** plugin (or standalone `docker-compose`).
-- Open **SSH** from your IP (and **80** on the web instance if you serve HTTP). No need to pre-create **`/app`** or **`docker-compose.yml`**; the deploy workflow does that.
+- Open **SSH** from your IP, and on the **web** instance **80**, **443** (TCP), and **443** (UDP for HTTP/3). No need to pre-create **`/app`** or **`docker-compose.yml`**; the deploy workflow does that.
 
 Optional: IAM role or static keys on the **web** host for **S3**; workers need S3/LLM credentials as in **[`github-actions-environment.md`](github-actions-environment.md)**.
 
@@ -92,11 +93,31 @@ The workflow writes **`/app/docker-compose.yml`** for you. It matches this shape
 services:
   web:
     image: your-org/recruitai-nextjs-web:latest
-    ports:
-      - "80:3000"
+    expose:
+      - "3000"
     env_file: .env
     restart: always
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:
 ```
+
+**`Caddyfile`** is generated each deploy from repository variable **`APP_DOMAIN`** (e.g. `recruit.example.com { reverse_proxy web:3000 }`). Caddy obtains **HTTPS** certificates from Let’s Encrypt automatically once DNS points at the instance.
 
 Configuration is supplied by **`env_file`** pointing at **`/app/.env`**, populated from the **`EC2_WEB_ENV_FILE`** secret each deploy.
 
@@ -127,13 +148,15 @@ JUDGE0_API_TOKEN=...
 INTERNAL_API_SECRET=your-random-secret
 ```
 
-**DNS:** Point your domain’s **A record** at EC2 #1’s **public** IP.
+**DNS:** Point **`APP_DOMAIN`** (hostname) **A record** at EC2 #1’s **public** IP (e.g. Namecheap: host `recruit` → web server IP for `recruit.example.com`).
 
 **Security group — EC2 #1**
 
 | Port | Source | Reason |
 |------|--------|--------|
-| 80 | `0.0.0.0/0` | HTTP |
+| 80 | `0.0.0.0/0` | HTTP (Let’s Encrypt, redirect) |
+| 443 | `0.0.0.0/0` | HTTPS (TCP) |
+| 443 | `0.0.0.0/0` | UDP — add as **UDP** rule for HTTP/3 |
 | 22 | Your IP | SSH |
 
 ---
@@ -207,7 +230,7 @@ Allow **EC2 #1** and **EC2 #2** to reach your **managed Redis** (security group 
 ## 6. Network summary
 
 - **Web + workers → Redis**: outbound to your **hosted** Redis (**`REDIS_URL`**). Both EC2s need network access (VPC + security groups / managed Redis ACL).
-- **Workers → Web**: HTTP **`SCORING_API_URL`** (private IP, port **80**).
+- **Workers → Web**: HTTP **`SCORING_API_URL`** (private IP, port **80** — Caddy listens on **80** and proxies to Next).
 - **All → Supabase, S3, Judge0, LLM APIs**: outbound HTTPS (and Judge0 as configured).
 
 ---
@@ -226,7 +249,7 @@ Implementation: **`.github/workflows/deploy-ec2.yml`**.
 
 **AWS (once per instance)**
 
-1. Launch **EC2 #1** (web) and **EC2 #2** (workers); attach security groups (web: **22**, **80**; workers: **22**; both: outbound as in sections 4–6).
+1. Launch **EC2 #1** (web) and **EC2 #2** (workers); attach security groups (web: **22**, **80**, **443** TCP, **443** UDP; workers: **22**; both: outbound as in sections 4–6).
 2. Install Docker + Compose plugin; ensure **`ec2-user`** (or **`ubuntu`**) can run **`docker`** (e.g. group membership or **`sudo`** as you prefer—if deploy uses **`sudo docker`**, adjust the workflow SSH scripts accordingly; current scripts use **`docker`** without **`sudo`**).
 
 **GitHub (once)**
@@ -265,4 +288,4 @@ Implementation: **`.github/workflows/deploy-ec2.yml`**.
 - [ ] Judge0 URL/token match your executor environment.
 - [ ] Evaluator and CV parser have LLM keys set.
 - [ ] `SCORING_API_URL` uses private IP or internal DNS; confirm aggregate auth behavior.
-- [ ] **HTTPS:** this minimal plan exposes **HTTP on port 80**. Add **nginx + Certbot** on EC2 #1 or terminate TLS at a future load balancer if you need HTTPS.
+- [ ] **HTTPS:** set **`APP_DOMAIN`** and DNS; the web stack includes **Caddy** (Let’s Encrypt). Open **443** TCP and **443** UDP on EC2 #1.

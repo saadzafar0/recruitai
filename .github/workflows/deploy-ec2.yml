@@ -1,8 +1,9 @@
 # Build all service images → Docker Hub → SSH deploy to two EC2 hosts (web + workers).
 # nextjs-web image: pass NEXT_PUBLIC_* build-args (vars/secrets below) so the browser bundle
 # is not stuck on dummy.supabase.co. Runtime EC2 .env is not enough for client-side Supabase.
-# Ensures /app, writes docker-compose.yml from DOCKERHUB_USERNAME, uploads .env from secrets,
-# then compose pull + up. See docs/github-actions-environment.md
+# Web host: Caddy terminates TLS (Let's Encrypt) for APP_DOMAIN; reverse-proxies to Next on :3000.
+# Ensures /app, writes docker-compose.yml + Caddyfile from DOCKERHUB_USERNAME and APP_DOMAIN,
+# uploads .env from secrets, then compose pull + up. See docs/github-actions-environment.md
 name: deploy-ec2
 
 on:
@@ -11,7 +12,6 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
-# Do not cancel in-flight runs: deploy could leave EC2 half-updated. New runs for the same ref queue.
 concurrency:
   group: deploy-ec2-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -68,11 +68,11 @@ jobs:
           ANON: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           if [ -z "${URL}" ]; then
-            echo "::error::Set **variable** or **secret** NEXT_PUBLIC_SUPABASE_URL for CI. It is baked into the Next.js client at docker build; EC2_WEB_ENV_FILE alone cannot fix sign-in."
+            echo "::error::Set variable or secret NEXT_PUBLIC_SUPABASE_URL for CI."
             exit 1
           fi
           if [ -z "${ANON}" ]; then
-            echo "::error::Set **secret** NEXT_PUBLIC_SUPABASE_ANON_KEY (anon key for the browser bundle at docker build; same value as in EC2_WEB_ENV_FILE)."
+            echo "::error::Set secret NEXT_PUBLIC_SUPABASE_ANON_KEY."
             exit 1
           fi
 
@@ -98,7 +98,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          # nextjs-web Dockerfile consumes these; other service Dockerfiles ignore unused args.
           build-args: |
             NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL != '' && vars.NEXT_PUBLIC_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -119,39 +118,75 @@ jobs:
         env:
           HOST: ${{ secrets.WEB_EC2_IP }}
           KEY: ${{ secrets.SSH_KEY }}
+          DOMAIN: ${{ vars.APP_DOMAIN }}
         run: |
           if [ -z "${HOST}" ]; then
-            echo "::error::Set repository secret WEB_EC2_IP (web EC2 host for SSH/SCP)."
+            echo "::error::Set repository secret WEB_EC2_IP."
             exit 1
           fi
           if [ -z "${KEY}" ]; then
-            echo "::error::Set repository secret SSH_KEY (private key PEM for EC2)."
+            echo "::error::Set repository secret SSH_KEY."
+            exit 1
+          fi
+          if [ -z "${DOMAIN}" ]; then
+            echo "::error::Set repository variable APP_DOMAIN (e.g. recruit.saadzafar.dev)."
             exit 1
           fi
 
-      - name: Prepare web docker-compose.yml and web.env
+      - name: Prepare docker-compose.yml, Caddyfile, and web.env
         run: |
           set -euo pipefail
           if [ -z "${EC2_WEB_ENV_FILE:-}" ]; then
-            echo "::error::Set repository secret EC2_WEB_ENV_FILE (multiline contents of /app/.env for the web EC2)."
+            echo "::error::Set repository secret EC2_WEB_ENV_FILE."
             exit 1
           fi
           D="${GITHUB_WORKSPACE}/ec2-deploy-web"
           mkdir -p "$D"
           NS="${DOCKERHUB_NS}"
-          cat > "$D/docker-compose.yml" <<EOF
-          services:
-            web:
-              image: ${NS}/recruitai-nextjs-web:latest
-              ports:
-                - "80:3000"
-              env_file: .env
-              restart: always
-          EOF
+          DOMAIN="${APP_DOMAIN}"
+
+          # Write compose/Caddy without heredoc body indentation (YAML would otherwise get leading spaces).
+          {
+            printf '%s\n' \
+              'services:' \
+              '  web:' \
+              "    image: ${NS}/recruitai-nextjs-web:latest" \
+              '    expose:' \
+              '      - "3000"' \
+              '    env_file: .env' \
+              '    restart: always' \
+              '' \
+              '  caddy:' \
+              '    image: caddy:2-alpine' \
+              '    depends_on:' \
+              '      - web' \
+              '    ports:' \
+              '      - "80:80"' \
+              '      - "443:443"' \
+              '      - "443:443/udp"' \
+              '    volumes:' \
+              '      - ./Caddyfile:/etc/caddy/Caddyfile' \
+              '      - caddy_data:/data' \
+              '      - caddy_config:/config' \
+              '    restart: always' \
+              '' \
+              'volumes:' \
+              '  caddy_data:' \
+              '  caddy_config:'
+          } > "$D/docker-compose.yml"
+
+          {
+            printf '%s\n' \
+              "${DOMAIN} {" \
+              '    reverse_proxy web:3000' \
+              '}'
+          } > "$D/Caddyfile"
+
           printf '%s' "$EC2_WEB_ENV_FILE" > "$D/web.env"
         env:
           DOCKERHUB_NS: ${{ vars.DOCKERHUB_USERNAME }}
           EC2_WEB_ENV_FILE: ${{ secrets.EC2_WEB_ENV_FILE }}
+          APP_DOMAIN: ${{ vars.APP_DOMAIN }}
 
       - name: Ensure /app exists on web EC2
         uses: appleboy/ssh-action@v1.2.0
@@ -163,14 +198,13 @@ jobs:
             sudo mkdir -p /app
             sudo chown -R "$(whoami):$(whoami)" /app
 
-      - name: Upload compose and .env to web EC2
+      - name: Upload compose, Caddyfile, and .env to web EC2
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.WEB_EC2_IP }}
           username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
           key: ${{ secrets.SSH_KEY }}
-          # Relative to workspace; strip one path component so files land as /app/docker-compose.yml and /app/web.env
-          source: ec2-deploy-web/docker-compose.yml,ec2-deploy-web/web.env
+          source: ec2-deploy-web/docker-compose.yml,ec2-deploy-web/Caddyfile,ec2-deploy-web/web.env
           strip_components: 1
           target: /app
           overwrite: true
@@ -185,8 +219,8 @@ jobs:
             mv -f /app/web.env /app/.env
             chmod 600 /app/.env
             cd /app
-            docker compose pull web
-            docker compose up -d --remove-orphans web
+            docker compose pull web caddy
+            docker compose up -d --remove-orphans web caddy
 
   deploy-workers:
     needs: build-and-push
@@ -200,11 +234,11 @@ jobs:
           KEY: ${{ secrets.SSH_KEY }}
         run: |
           if [ -z "${HOST}" ]; then
-            echo "::error::Set repository secret WORKERS_EC2_IP (workers EC2 host for SSH/SCP)."
+            echo "::error::Set repository secret WORKERS_EC2_IP."
             exit 1
           fi
           if [ -z "${KEY}" ]; then
-            echo "::error::Set repository secret SSH_KEY (private key PEM for EC2)."
+            echo "::error::Set repository secret SSH_KEY."
             exit 1
           fi
 
@@ -212,29 +246,32 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${EC2_WORKERS_ENV_FILE:-}" ]; then
-            echo "::error::Set repository secret EC2_WORKERS_ENV_FILE (multiline /app/.env for executor + evaluator + cv-parser)."
+            echo "::error::Set repository secret EC2_WORKERS_ENV_FILE."
             exit 1
           fi
           D="${GITHUB_WORKSPACE}/ec2-deploy-workers"
           mkdir -p "$D"
           NS="${DOCKERHUB_NS}"
-          cat > "$D/docker-compose.yml" <<EOF
-          services:
-            executor:
-              image: ${NS}/recruitai-executor-worker:latest
-              env_file: .env
-              restart: always
 
-            evaluator:
-              image: ${NS}/recruitai-evaluator-worker:latest
-              env_file: .env
-              restart: always
+          {
+            printf '%s\n' \
+              'services:' \
+              '  executor:' \
+              "    image: ${NS}/recruitai-executor-worker:latest" \
+              '    env_file: .env' \
+              '    restart: always' \
+              '' \
+              '  evaluator:' \
+              "    image: ${NS}/recruitai-evaluator-worker:latest" \
+              '    env_file: .env' \
+              '    restart: always' \
+              '' \
+              '  cv-parser:' \
+              "    image: ${NS}/recruitai-cv-parser-worker:latest" \
+              '    env_file: .env' \
+              '    restart: always'
+          } > "$D/docker-compose.yml"
 
-            cv-parser:
-              image: ${NS}/recruitai-cv-parser-worker:latest
-              env_file: .env
-              restart: always
-          EOF
           printf '%s' "$EC2_WORKERS_ENV_FILE" > "$D/workers.env"
         env:
           DOCKERHUB_NS: ${{ vars.DOCKERHUB_USERNAME }}
