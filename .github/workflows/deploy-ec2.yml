@@ -1,12 +1,13 @@
 # Build all service images → Docker Hub → SSH deploy to two EC2 hosts (web + workers).
-# See docs/deployment-ec2-docker.md
+# Ensures /app, writes docker-compose.yml from DOCKERHUB_USERNAME, uploads .env from secrets,
+# then compose pull + up. See docs/github-actions-environment.md
 name: deploy-ec2
 
 on:
   push:
     branches: [main, master]
     tags: ['v*']
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 concurrency:
   group: deploy-ec2-${{ github.workflow }}-${{ github.ref }}
@@ -34,14 +35,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify Docker Hub namespace
+      - name: Verify Docker Hub configuration
         run: |
-          if [ -z "$DOCKERHUB_USER" ]; then
-            echo "::error::Set DOCKERHUB_USERNAME (repository variable or secret) to your Docker Hub namespace."
+          if [ -z "${DOCKERHUB_USER}" ]; then
+            echo "::error::Set repository variable DOCKERHUB_USERNAME to your Docker Hub namespace."
+            exit 1
+          fi
+          if [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "::error::Set repository secret DOCKERHUB_TOKEN (Docker Hub access token)."
             exit 1
           fi
         env:
           DOCKERHUB_USER: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -83,29 +89,129 @@ jobs:
     if: ${{ vars.DOCKERHUB_USERNAME != '' && secrets.WEB_EC2_IP != '' && secrets.SSH_KEY != '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy web EC2
+      - name: Prepare web docker-compose.yml and web.env
+        run: |
+          set -euo pipefail
+          if [ -z "${EC2_WEB_ENV_FILE:-}" ]; then
+            echo "::error::Set repository secret EC2_WEB_ENV_FILE (multiline contents of /app/.env for the web EC2)."
+            exit 1
+          fi
+          D="${{ runner.temp }}/web-deploy"
+          mkdir -p "$D"
+          NS="${DOCKERHUB_NS}"
+          cat > "$D/docker-compose.yml" <<EOF
+          services:
+            web:
+              image: ${NS}/recruitai-nextjs-web:latest
+              ports:
+                - "80:3000"
+              env_file: .env
+              restart: always
+          EOF
+          printf '%s' "$EC2_WEB_ENV_FILE" > "$D/web.env"
+        env:
+          DOCKERHUB_NS: ${{ vars.DOCKERHUB_USERNAME }}
+          EC2_WEB_ENV_FILE: ${{ secrets.EC2_WEB_ENV_FILE }}
+
+      - name: Ensure /app exists on web EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.WEB_EC2_IP }}
-          username: ec2-user
+          username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            sudo mkdir -p /app
+            sudo chown -R "$(whoami):$(whoami)" /app
+
+      - name: Upload compose and .env to web EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.WEB_EC2_IP }}
+          username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
+          key: ${{ secrets.SSH_KEY }}
+          source: ${{ runner.temp }}/web-deploy/docker-compose.yml,${{ runner.temp }}/web-deploy/web.env
+          target: /app
+          overwrite: true
+
+      - name: Deploy web on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.WEB_EC2_IP }}
+          username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            mv -f /app/web.env /app/.env
+            chmod 600 /app/.env
             cd /app
-            docker compose pull
-            docker compose up -d --remove-orphans
+            docker compose pull web
+            docker compose up -d --remove-orphans web
 
   deploy-workers:
     needs: build-and-push
     if: ${{ vars.DOCKERHUB_USERNAME != '' && secrets.WORKERS_EC2_IP != '' && secrets.SSH_KEY != '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy workers EC2
+      - name: Prepare workers docker-compose.yml and workers.env
+        run: |
+          set -euo pipefail
+          if [ -z "${EC2_WORKERS_ENV_FILE:-}" ]; then
+            echo "::error::Set repository secret EC2_WORKERS_ENV_FILE (multiline /app/.env for executor + evaluator + cv-parser)."
+            exit 1
+          fi
+          D="${{ runner.temp }}/workers-deploy"
+          mkdir -p "$D"
+          NS="${DOCKERHUB_NS}"
+          cat > "$D/docker-compose.yml" <<EOF
+          services:
+            executor:
+              image: ${NS}/recruitai-executor-worker:latest
+              env_file: .env
+              restart: always
+
+            evaluator:
+              image: ${NS}/recruitai-evaluator-worker:latest
+              env_file: .env
+              restart: always
+
+            cv-parser:
+              image: ${NS}/recruitai-cv-parser-worker:latest
+              env_file: .env
+              restart: always
+          EOF
+          printf '%s' "$EC2_WORKERS_ENV_FILE" > "$D/workers.env"
+        env:
+          DOCKERHUB_NS: ${{ vars.DOCKERHUB_USERNAME }}
+          EC2_WORKERS_ENV_FILE: ${{ secrets.EC2_WORKERS_ENV_FILE }}
+
+      - name: Ensure /app exists on workers EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.WORKERS_EC2_IP }}
-          username: ec2-user
+          username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            sudo mkdir -p /app
+            sudo chown -R "$(whoami):$(whoami)" /app
+
+      - name: Upload compose and .env to workers EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.WORKERS_EC2_IP }}
+          username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
+          key: ${{ secrets.SSH_KEY }}
+          source: ${{ runner.temp }}/workers-deploy/docker-compose.yml,${{ runner.temp }}/workers-deploy/workers.env
+          target: /app
+          overwrite: true
+
+      - name: Deploy workers on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.WORKERS_EC2_IP }}
+          username: ${{ vars.EC2_SSH_USER != '' && vars.EC2_SSH_USER || 'ec2-user' }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            mv -f /app/workers.env /app/.env
+            chmod 600 /app/.env
             cd /app
-            docker compose pull
-            docker compose up -d --remove-orphans
+            docker compose pull executor evaluator cv-parser
+            docker compose up -d --remove-orphans executor evaluator cv-parser

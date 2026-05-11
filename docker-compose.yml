@@ -1,0 +1,36 @@
+# Local / full-stack dev: Next.js + all BullMQ workers (no Redis container).
+# Set REDIS_URL in each service env file (services/<name>/.env) or export it before `compose up`.
+# Example: REDIS_URL=rediss://:password@your-cache.amazonaws.com:6379
+
+services:
+  web:
+    build:
+      context: ./services/nextjs-web
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./services/nextjs-web/.env
+    environment:
+      HOSTNAME: '0.0.0.0'
+    restart: unless-stopped
+
+  executor:
+    build:
+      context: ./services/executor-worker
+    env_file:
+      - ./services/executor-worker/.env
+    restart: unless-stopped
+
+  evaluator:
+    build:
+      context: ./services/evaluator-worker
+    env_file:
+      - ./services/evaluator-worker/.env
+    restart: unless-stopped
+
+  cv-parser:
+    build:
+      context: ./services/cv-parser-worker
+    env_file:
+      - ./services/cv-parser-worker/.env
+    restart: unless-stopped

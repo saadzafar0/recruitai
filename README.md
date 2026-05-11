@@ -30,7 +30,7 @@ RecruitAI is structured as a monorepo utilizing a microservices architecture to 
 
 ```text
 recruitai/
-├── .github/workflows/          # deploy-ec2.yml (Docker Hub → EC2); deploy-eks-deprecated.yml (legacy)
+├── .github/workflows/          # deploy-ec2.yml — Docker Hub → EC2 SSH deploy
 ├── docs/
 │   └── deployment-ec2-docker.md   # Current deployment plan
 ├── schemas/                    # Shared JSON schemas for queue payloads
@@ -40,5 +40,5 @@ recruitai/
 │   ├── evaluator-worker/       # BullMQ worker for heavy LLM reasoning (System Design)
 │   └── cv-parser-worker/       # BullMQ worker for extracting data from S3 PDFs
 ├── infra/kubernetes-deprecated/  # EKS manifests (deprecated; reference only)
-└── docker-compose.yml          # Local multi-container development environment
+└── docker-compose.yml          # Local: web + workers (REDIS_URL in each service .env)
 ```
