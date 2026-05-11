@@ -2,13 +2,16 @@ recruitai/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml
-│       └── deploy-eks.yml                  # Pushes to Docker Hub, applies to EKS
+│       ├── deploy-ec2.yml                  # Docker Hub + SSH deploy to 2 EC2 (current)
+│       └── deploy-eks-deprecated.yml       # Legacy: Docker Hub only, workflow_dispatch
 │
 ├── schemas/
 │   ├── run-code.v1.json
 │   ├── evaluate.v1.json
 │   └── cv-parsed.v1.json
+│
+├── docs/
+│   └── deployment-ec2-docker.md            # Current EC2 + Docker Compose deployment
 │
 ├── services/
 │   │
@@ -60,18 +63,10 @@ recruitai/
 │           └── services/geminiParser.ts    # Extracts structured CV data
 │
 ├── infra/
-│   └── kubernetes/
+│   └── kubernetes-deprecated/            # EKS manifests (deprecated; reference only)
 │       ├── deployments/
-│       │   ├── nextjs-web.yaml             # Points to Docker Hub image
-│       │   ├── executor-worker.yaml        # Points to Docker Hub image
-│       │   ├── evaluator-worker.yaml       # Points to Docker Hub image
-│       │   └── cv-parser-worker.yaml       # Points to Docker Hub image
-│       ├── secrets/
-│       │   └── (optional) pull Secret yaml if using private registries
 │       ├── services/
-│       │   └── web-service.yaml
 │       └── ingress/
-│           └── ingress.yaml
 │
 ├── docker-compose.yml
 └── README.md
