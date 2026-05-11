@@ -2,8 +2,7 @@ recruitai/
 │
 ├── .github/
 │   └── workflows/
-│       ├── deploy-ec2.yml                  # Docker Hub + SSH deploy to 2 EC2 (current)
-│       └── deploy-eks-deprecated.yml       # Legacy: Docker Hub only, workflow_dispatch
+│       └── deploy-ec2.yml                  # Docker Hub + SSH deploy to 2 EC2
 │
 ├── schemas/
 │   ├── run-code.v1.json
@@ -68,5 +67,5 @@ recruitai/
 │       ├── services/
 │       └── ingress/
 │
-├── docker-compose.yml
+├── docker-compose.yml            # Local: web + workers (external REDIS_URL in .env)
 └── README.md

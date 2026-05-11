@@ -1,3 +1,5 @@
+# Executor worker — configuration from environment at runtime (Compose env_file on EC2).
+
 FROM node:20-alpine AS deps
 WORKDIR /app
 

@@ -1,6 +1,6 @@
 # recruitai - nextjs-web
 #
-# Image: must match GitHub Actions → Docker Hub (deploy-ec2.yml or deploy-eks-deprecated.yml)
+# Image: must match GitHub Actions → Docker Hub (deploy-ec2.yml)
 #   docker.io/REPLACE_DOCKERHUB_NAMESPACE/recruitai-nextjs-web:TAG
 # Replace REPLACE_DOCKERHUB_NAMESPACE and image tag before apply, or use kustomize/helm.
 #
