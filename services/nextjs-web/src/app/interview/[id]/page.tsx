@@ -3,7 +3,8 @@
 import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Code2, Layout, Mic } from 'lucide-react'
-import MockInterviewPage from '../../candidate/mock-interview/page'
+import { Suspense } from 'react'
+import { VapiInterviewRoom } from '@/components/mock-interview'
 
 type InterviewKind = 'voice' | 'coding' | 'design' | 'unknown'
 
@@ -24,7 +25,11 @@ export default function UserInterviewPage() {
   const interviewKind = useMemo(() => resolveInterviewKind(params?.id), [params])
 
   if (interviewKind === 'voice') {
-    return <MockInterviewPage />
+    return (
+      <Suspense fallback={null}>
+        <VapiInterviewRoom backPath="/candidate" badgeLabel="Voice Interview" />
+      </Suspense>
+    )
   }
 
   const isCoding = interviewKind === 'coding'

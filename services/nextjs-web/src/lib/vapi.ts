@@ -19,13 +19,10 @@ export function getVapiClient(): Vapi {
   if (!vapiInstance) {
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY
     if (!publicKey) {
-      console.warn(
-        'VAPI: NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set.',
-        'Get your public key from https://dashboard.vapi.ai/account'
-      )
+      throw new Error('VAPI: NEXT_PUBLIC_VAPI_PUBLIC_KEY is missing. Please check your .env.local file.')
     }
     // Initialize VAPI with the public key for browser-based calls
-    vapiInstance = new Vapi(publicKey || '')
+    vapiInstance = new Vapi(publicKey)
   }
   return vapiInstance
 }

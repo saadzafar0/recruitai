@@ -90,8 +90,14 @@ export function useVapi(): UseVapiReturn {
 
   // Initialize VAPI and setup event listeners
   useEffect(() => {
-    const vapi = getVapiClient()
-    vapiRef.current = vapi
+    let vapi: Vapi
+    try {
+      vapi = getVapiClient()
+      vapiRef.current = vapi
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'VAPI initialization failed')
+      return
+    }
 
     // Call started
     const handleCallStart = () => {
@@ -131,27 +137,58 @@ export function useVapi(): UseVapiReturn {
     const handleMessage = (message: unknown) => {
       if (sessionEndedRef.current) return
 
-      const msg = message as VapiTranscriptMessage
+      const msg = message as any
+      
+      // 1. Handle Transcripts (User and Final Assistant)
       if (msg.type === 'transcript') {
-        if (msg.transcriptType === 'partial') {
-          setCurrentTranscript(msg.transcript)
-          if (msg.role === 'user') {
+        const transcriptMsg = msg as VapiTranscriptMessage
+        if (transcriptMsg.transcriptType === 'partial') {
+          if (transcriptMsg.role === 'user') {
+            setCurrentTranscript(transcriptMsg.transcript)
             setIsListening(true)
             setStatusSafe('listening')
           }
-        } else if (msg.transcriptType === 'final') {
-          // Add to transcripts list
+        } else if (transcriptMsg.transcriptType === 'final') {
           const newEntry: TranscriptEntry = {
             id: `transcript-${++transcriptIdCounter.current}`,
-            role: msg.role,
-            text: msg.transcript,
+            role: transcriptMsg.role,
+            text: transcriptMsg.transcript,
             timestamp: Date.now(),
             isFinal: true,
           }
           setTranscripts(prev => [...prev, newEntry])
-          setCurrentTranscript('')
+          if (transcriptMsg.role === 'user') {
+            setCurrentTranscript('')
+            setIsListening(false)
+          }
+        }
+      }
+
+      // 2. Handle Model Output (Assistant streaming text)
+      if (msg.type === 'model-output' || msg.type === 'assistant-message') {
+        const text = msg.output || msg.message || ''
+        if (text) {
+          setIsSpeaking(true)
+          setStatusSafe('speaking')
+          setCurrentTranscript(prev => (prev.startsWith('AI:') ? prev : '') + text)
+        }
+      }
+
+      // 3. Handle Speech Updates (Low-level status changes)
+      if (msg.type === 'speech-update') {
+        if (msg.status === 'started') {
+          if (msg.role === 'user') {
+            setIsListening(true)
+            setStatusSafe('listening')
+          } else {
+            setIsSpeaking(true)
+            setStatusSafe('speaking')
+          }
+        } else if (msg.status === 'stopped') {
           if (msg.role === 'user') {
             setIsListening(false)
+          } else {
+            setIsSpeaking(false)
           }
         }
       }

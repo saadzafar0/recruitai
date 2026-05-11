@@ -143,7 +143,7 @@ export default function AssessmentLobbyPage() {
               description="A 10-minute conversational round to assess your soft skills and role fit."
               status={voiceStatus}
               disabled={!micAvailable}
-              onClick={() => router.push('/interview/voice')}
+              onClick={() => router.push(`/interview/voice?applicationId=${applicationId}`)}
             />
             <AssessmentCard
               title="Coding Test"
