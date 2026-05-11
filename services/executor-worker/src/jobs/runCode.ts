@@ -277,6 +277,18 @@ function parseInlineTestCases(raw: unknown): InlineTestCase[] {
 // Core execution
 // ---------------------------------------------------------------------------
 
+function normalizeOutput(value: string): string {
+	const trimmed = value.trim()
+	if (!trimmed) return ''
+
+	try {
+		const parsed = JSON.parse(trimmed)
+		return JSON.stringify(parsed)
+	} catch {
+		return trimmed.replace(/\s+/g, '')
+	}
+}
+
 async function executeTestCase(
 	sourceCode: string,
 	languageId: number,
@@ -288,7 +300,9 @@ async function executeTestCase(
 		sourceCode,
 		languageId,
 		stdin,
-		expectedOutput: expectedOutput || undefined,
+		// Do NOT pass expectedOutput to Judge0 — its string comparison is whitespace-sensitive
+		// and will false-fail correct solutions (e.g. "[24, 12, 8, 6]" vs "[24,12,8,6]").
+		// We compare outputs ourselves below.
 		cpuTimeLimit: timeLimitSeconds,
 	})
 
@@ -432,13 +446,33 @@ async function processCodeSubmission(
 				languageId,
 				tc.input,
 				tc.expectedOutput,
-				timeLimitHint ? timeLimitHint / 1000 : undefined,
+				10
+				//timeLimitHint ? timeLimitHint / 1000 : undefined,
 			)
 
-			const passed = result.verdict === 'accepted'
+			// Judge0 verdict is 'accepted' only when we pass expected_output to it.
+			// Since we deliberately omit it (to avoid whitespace false-failures), we
+			// do the comparison ourselves: normalise both sides by trimming whitespace.
+			const actualNorm = normalizeOutput(result.stdout)
+			const expectedNorm = normalizeOutput(tc.expectedOutput)
+			const outputMatches =
+				!tc.expectedOutput // no expected = just check it ran without error
+					? result.verdict !== 'runtime_error' &&
+					  result.verdict !== 'compilation_error' &&
+					  result.verdict !== 'time_limit_exceeded'
+					: actualNorm === expectedNorm
+
+			const passed =
+				(result.verdict === 'accepted' || result.verdict === 'wrong_answer') &&
+				outputMatches
 
 			if (!passed && overallVerdict === 'accepted') {
-				overallVerdict = result.verdict === 'pending' ? 'runtime_error' : result.verdict
+				// Use Judge0's verdict only for execution errors; for output mismatches use wrong_answer
+				const execVerdict = result.verdict === 'pending' ? 'runtime_error' : result.verdict
+				overallVerdict =
+					execVerdict === 'wrong_answer' || execVerdict === 'accepted'
+						? 'wrong_answer'   // output mismatch
+						: execVerdict      // TLE, runtime_error, etc.
 			}
 
 			if (result.time !== null) {
@@ -448,14 +482,13 @@ async function processCodeSubmission(
 				maxMemoryKb = result.memory
 			}
 
-			if (tc.id) {
-				testCaseResults.push({
-					testCaseId: tc.id,
-					passed,
-					actualOutput: result.stdout.trim(),
-					errorMessage: result.stderr || result.compileOutput || result.message || '',
-				})
-			}
+			// Always push — synthetic test cases (null id) still count toward the score.
+			testCaseResults.push({
+				testCaseId: tc.id ?? null,
+				passed,
+				actualOutput: result.stdout.trim(),
+				errorMessage: result.stderr || result.compileOutput || result.message || '',
+			})
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 			console.warn(`[executor-worker] Test case execution failed: ${message}`)
@@ -464,14 +497,12 @@ async function processCodeSubmission(
 				overallVerdict = 'runtime_error'
 			}
 
-			if (tc.id) {
-				testCaseResults.push({
-					testCaseId: tc.id,
-					passed: false,
-					actualOutput: '',
-					errorMessage: message,
-				})
-			}
+			testCaseResults.push({
+				testCaseId: tc.id ?? null,
+				passed: false,
+				actualOutput: '',
+				errorMessage: message,
+			})
 		}
 	}
 

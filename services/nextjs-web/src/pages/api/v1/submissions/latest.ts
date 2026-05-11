@@ -45,7 +45,7 @@ export default async function handler(
 
   const { data: submission, error: submissionError } = await supabaseAdmin
     .from('coding_submissions')
-    .select('verdict, ai_feedback')
+    .select('id, verdict, ai_feedback')
     .eq('assessment_id', assessment.id)
     .order('submitted_at', { ascending: false })
     .limit(1)
@@ -59,11 +59,44 @@ export default async function handler(
     return res.status(404).json({ success: false, error: 'No submissions found yet' })
   }
 
+  let output = submission.ai_feedback || ''
+
+  if (!output && submission.verdict && submission.verdict !== 'pending') {
+    const { data: failedResult } = await supabaseAdmin
+      .from('coding_test_results')
+      .select('error_message, actual_output')
+      .eq('submission_id', submission.id)
+      .eq('passed', false)
+      .limit(1)
+      .maybeSingle()
+
+    if (failedResult) {
+      const parts = []
+      if (failedResult.error_message) parts.push(`Error: ${failedResult.error_message}`)
+      if (failedResult.actual_output) parts.push(`Output: ${failedResult.actual_output}`)
+      output = parts.join('\n')
+    } else {
+      const { data: anyResult } = await supabaseAdmin
+        .from('coding_test_results')
+        .select('error_message, actual_output')
+        .eq('submission_id', submission.id)
+        .limit(1)
+        .maybeSingle()
+
+      if (anyResult) {
+        const parts = []
+        if (anyResult.error_message) parts.push(`Error: ${anyResult.error_message}`)
+        if (anyResult.actual_output) parts.push(`Output: ${anyResult.actual_output}`)
+        output = parts.join('\n')
+      }
+    }
+  }
+
   return res.status(200).json({
     success: true,
     data: {
       verdict: submission.verdict || 'pending',
-      output: submission.ai_feedback || '',
+      output,
     },
   })
 }

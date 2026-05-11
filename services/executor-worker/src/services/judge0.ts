@@ -7,7 +7,7 @@
  *   2. **Polling mode** — submit with `wait=false`, then poll `GET /submissions/:token`
  *      until the status is terminal. Used as a fallback.
  *
- * All payloads are base64-encoded to avoid encoding issues with special chars.
+ * Payloads are sent as plain JSON (base64 disabled).
  *
  * @see https://judge0.com/#submissions-submission-post
  */
@@ -108,23 +108,6 @@ export function isTerminalStatus(statusId: number): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Base64 helpers
-// ---------------------------------------------------------------------------
-
-function toBase64(value: string): string {
-	return Buffer.from(value, 'utf8').toString('base64')
-}
-
-export function fromBase64(value: string | null | undefined): string {
-	if (!value) return ''
-	try {
-		return Buffer.from(value, 'base64').toString('utf8')
-	} catch {
-		return value
-	}
-}
-
-// ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
@@ -132,12 +115,6 @@ function getJudge0Url(): string {
 	const url = process.env.JUDGE0_URL
 	if (!url) throw new Error('Missing JUDGE0_URL environment variable')
 	return url.replace(/\/+$/, '')
-}
-
-function getAuthHeaders(): Record<string, string> {
-	const token = process.env.JUDGE0_API_TOKEN
-	if (!token) return {}
-	return { 'X-Auth-Token': token }
 }
 
 function getCallbackUrl(): string | null {
@@ -225,16 +202,16 @@ export async function submitToJudge0(
 	const callbackUrl = getCallbackUrl()
 
 	const body: Record<string, unknown> = {
-		source_code: toBase64(params.sourceCode),
+		source_code: params.sourceCode,
 		language_id: params.languageId,
-		base64_encoded: true,
+		base64_encoded: false,
 	}
 
 	if (params.stdin) {
-		body.stdin = toBase64(params.stdin)
+		body.stdin = params.stdin
 	}
 	if (params.expectedOutput) {
-		body.expected_output = toBase64(params.expectedOutput)
+		body.expected_output = params.expectedOutput
 	}
 	if (params.cpuTimeLimit) {
 		body.cpu_time_limit = params.cpuTimeLimit
@@ -246,13 +223,12 @@ export async function submitToJudge0(
 		body.callback_url = callbackUrl
 	}
 
-	const endpoint = `${baseUrl}/submissions?base64_encoded=true&wait=false`
+	const endpoint = `${baseUrl}/submissions?base64_encoded=false&wait=false`
 	console.log(`[executor-worker] Submitting to Judge0: ${endpoint}`)
 	const response = await fetch(endpoint, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			...getAuthHeaders(),
 		},
 		body: JSON.stringify(body),
 		signal: AbortSignal.timeout(getTimeoutMs()),
@@ -287,11 +263,10 @@ export async function pollSubmissionResult(
 	const maxAttempts = getPollMaxAttempts()
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		const endpoint = `${baseUrl}/submissions/${token}?base64_encoded=true&fields=token,status,stdout,stderr,compile_output,message,time,memory`
+		const endpoint = `${baseUrl}/submissions/${token}?base64_encoded=false&fields=token,status,stdout,stderr,compile_output,message,time,memory`
 
 		const response = await fetch(endpoint, {
 			method: 'GET',
-			headers: getAuthHeaders(),
 			signal: AbortSignal.timeout(getTimeoutMs()),
 		})
 
@@ -304,7 +279,16 @@ export async function pollSubmissionResult(
 		const statusId = data.status?.id ?? 0
 
 		if (isTerminalStatus(statusId)) {
-			return parseJudge0Response(data as unknown as Record<string, unknown>)
+			const result = parseJudge0Response(data as unknown as Record<string, unknown>)
+			console.log('[executor-worker] Judge0 output:', {
+				statusId: result.statusId,
+				verdict: result.verdict,
+				stdout: result.stdout,
+				stderr: result.stderr,
+				compileOutput: result.compileOutput,
+				message: result.message,
+			})
+			return result
 		}
 
 		// Wait before next poll
@@ -326,9 +310,9 @@ export function parseJudge0Response(data: Record<string, unknown>): Judge0Submis
 		token: (data.token as string) || '',
 		statusId,
 		verdict: mapJudge0StatusToVerdict(statusId),
-		stdout: fromBase64(data.stdout as string | null),
-		stderr: fromBase64(data.stderr as string | null),
-		compileOutput: fromBase64(data.compile_output as string | null),
+		stdout: (data.stdout as string) || '',
+		stderr: (data.stderr as string) || '',
+		compileOutput: (data.compile_output as string) || '',
 		message: (data.message as string) || '',
 		time: data.time !== null && data.time !== undefined ? parseFloat(String(data.time)) : null,
 		memory: data.memory !== null && data.memory !== undefined ? Number(data.memory) : null,

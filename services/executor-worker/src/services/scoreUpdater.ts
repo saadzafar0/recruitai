@@ -15,7 +15,7 @@ import type { SubmissionVerdict } from './judge0'
 // ---------------------------------------------------------------------------
 
 export interface TestCaseResult {
-	testCaseId: string
+	testCaseId: string | null
 	passed: boolean
 	actualOutput: string
 	errorMessage: string
@@ -43,6 +43,27 @@ export interface SubmissionScoreOutput {
 	scoreCorrectness: number
 }
 
+const MAX_FEEDBACK_LENGTH = 1000
+
+function buildFeedback(input: SubmissionScoreInput): string | null {
+	if (input.verdict === 'accepted') return null
+
+	const failing = input.testCaseResults.find((tc) => !tc.passed)
+	const parts: string[] = [`Verdict: ${input.verdict}`]
+
+	if (failing?.errorMessage) {
+		parts.push(`Error: ${failing.errorMessage.trim()}`)
+	}
+	if (failing?.actualOutput) {
+		parts.push(`Output: ${failing.actualOutput.trim()}`)
+	}
+
+	const message = parts.join('\n')
+	return message.length > MAX_FEEDBACK_LENGTH
+		? `${message.slice(0, MAX_FEEDBACK_LENGTH - 3)}...`
+		: message
+}
+
 // ---------------------------------------------------------------------------
 // Persistence
 // ---------------------------------------------------------------------------
@@ -54,10 +75,12 @@ export async function persistExecutionResults(
 		`[executor-worker] Persisting results for submission ${input.submissionId}: verdict=${input.verdict} score=${input.scoreCorrectness} passed=${input.testCasesPassed}/${input.testCasesTotal}`,
 	)
 	// 1. Update the coding_submissions row
+	const feedback = buildFeedback(input)
 	const { error: subError } = await supabaseAdmin
 		.from('coding_submissions')
 		.update({
 			verdict: input.verdict,
+			ai_feedback: feedback,
 			test_cases_total: input.testCasesTotal,
 			test_cases_passed: input.testCasesPassed,
 			test_cases_failed: input.testCasesFailed,
