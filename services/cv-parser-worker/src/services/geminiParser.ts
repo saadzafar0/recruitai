@@ -89,6 +89,12 @@ function buildUserPrompt(rawCvText: string): string {
 	const maxChars = Number.isFinite(maxCharsRaw) && maxCharsRaw > 0 ? maxCharsRaw : 20000
 	const truncatedText = rawCvText.slice(0, maxChars)
 
+	console.info('[cv-parser-worker] CV prompt length info', {
+		rawLength: rawCvText.length,
+		maxChars,
+		truncatedLength: truncatedText.length,
+	})
+
 	return [
 		JSON_SCHEMA_HINT,
 		'',
@@ -261,7 +267,15 @@ async function callGemini(rawCvText: string): Promise<ParsedCandidateCvData> {
 		timeoutMs,
 	)
 
+	console.info('[cv-parser-worker] Gemini request', {
+		model,
+		timeoutMs,
+		endpoint,
+		prompt: buildUserPrompt(rawCvText),
+	})
+
 	const responseJson = (await response.json()) as GeminiGenerateContentResponse
+	console.info('[cv-parser-worker] Gemini response', responseJson)
 
 	if (!response.ok) {
 		throw new Error(responseJson.error?.message || `Gemini request failed with status ${response.status}`)
@@ -318,7 +332,14 @@ async function callGrok(rawCvText: string): Promise<ParsedCandidateCvData> {
 		timeoutMs,
 	)
 
+	console.info('[cv-parser-worker] Grok request', {
+		model,
+		timeoutMs,
+		prompt: buildUserPrompt(rawCvText),
+	})
+
 	const responseJson = (await response.json()) as GrokChatResponse
+	console.info('[cv-parser-worker] Grok response', responseJson)
 
 	if (!response.ok) {
 		throw new Error(responseJson.error?.message || `Grok request failed with status ${response.status}`)
@@ -343,6 +364,10 @@ export async function parseCandidateCvWithLlm(
 	preferredProvider?: CvParserProvider,
 ): Promise<ParseCandidateCvResult> {
 	const providers = getProviderOrder(preferredProvider)
+	console.info('[cv-parser-worker] Provider order', {
+		preferredProvider: preferredProvider || null,
+		providers,
+	})
 	const failures: string[] = []
 
 	for (const provider of providers) {

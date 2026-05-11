@@ -80,17 +80,36 @@ async function processCvJob(job: Job<CvProcessingJobData>): Promise<CvProcessing
 	console.info(
 		`[cv-parser-worker] Processing job ${job.id || 'unknown'} for candidate profile ${candidateProfileId}`,
 	)
+	console.info('[cv-parser-worker] Job payload', {
+		jobId: job.id || 'unknown',
+		candidateProfileId,
+		applicantId: job.data.applicantId || null,
+		applicationId: job.data.applicationId || null,
+		cvFileUrl,
+		cvFileName: job.data.cvFileName || null,
+		s3Key: job.data.s3Key || null,
+		providerHint: job.data.providerHint || null,
+	})
 
 	try {
+		console.info(`[cv-parser-worker] Downloading CV for job ${job.id || 'unknown'}`)
 		const downloadedCv = await downloadCvFromS3({
 			cvFileUrl,
 			s3Key: job.data.s3Key,
 		})
+		console.info(`[cv-parser-worker] Downloaded CV for job ${job.id || 'unknown'}`)
 
+		console.info(`[cv-parser-worker] Extracting raw text for job ${job.id || 'unknown'}`)
 		const rawCvText = await extractRawCvText(downloadedCv)
+		console.info(
+			`[cv-parser-worker] Extracted raw text (${rawCvText.length} chars) for job ${job.id || 'unknown'}`,
+		)
 
+		console.info(`[cv-parser-worker] Parsing CV with LLM for job ${job.id || 'unknown'}`)
 		const parseResult = await parseCandidateCvWithLlm(rawCvText, job.data.providerHint)
+		console.info(`[cv-parser-worker] Parsed CV with provider ${parseResult.providerUsed} for job ${job.id || 'unknown'}`)
 
+		console.info(`[cv-parser-worker] Updating candidate profile ${candidateProfileId}`)
 		await updateCandidateProfileFromCvParse({
 			candidateProfileId,
 			applicantId: job.data.applicantId,
@@ -101,6 +120,7 @@ async function processCvJob(job: Job<CvProcessingJobData>): Promise<CvProcessing
 			parsed: parseResult.parsed,
 			providerUsed: parseResult.providerUsed,
 		})
+		console.info(`[cv-parser-worker] Finished profile update for ${candidateProfileId}`)
 
 		return {
 			candidateProfileId,

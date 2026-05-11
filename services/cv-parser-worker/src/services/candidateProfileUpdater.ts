@@ -35,6 +35,16 @@ export async function updateCandidateProfileFromCvParse(
   const parseVersionRaw = Number(process.env.CV_PARSER_VERSION || '1')
   const parseVersion = Number.isFinite(parseVersionRaw) ? parseVersionRaw : 1
 
+  console.info('[cv-parser-worker] Updating candidate_profiles', {
+    candidateProfileId: input.candidateProfileId,
+    applicantId: input.applicantId || null,
+    applicationId: input.applicationId || null,
+    cvFileUrl: input.cvFileUrl,
+    cvFileName: input.cvFileName || null,
+    providerUsed: input.providerUsed,
+    parseVersion,
+  })
+
   const { error: candidateProfileError } = await supabaseAdmin
     .from('candidate_profiles')
     .update({
@@ -53,6 +63,8 @@ export async function updateCandidateProfileFromCvParse(
     throw new Error(`Failed to update candidate_profiles: ${candidateProfileError.message}`)
   }
 
+  console.info('[cv-parser-worker] Resetting candidate_skills for profile', input.candidateProfileId)
+
   const { error: deleteSkillsError } = await supabaseAdmin
     .from('candidate_skills')
     .delete()
@@ -64,6 +76,10 @@ export async function updateCandidateProfileFromCvParse(
   }
 
   if (input.parsed.topTechnicalSkills.length > 0) {
+    console.info('[cv-parser-worker] Inserting candidate_skills', {
+      candidateProfileId: input.candidateProfileId,
+      count: input.parsed.topTechnicalSkills.length,
+    })
     const skillRows = input.parsed.topTechnicalSkills.map((skill) => ({
       profile_id: input.candidateProfileId,
       skill_name: skill,
@@ -97,6 +113,10 @@ export async function updateCandidateProfileFromCvParse(
     }
 
     if (Object.keys(profilePatch).length > 0) {
+      console.info('[cv-parser-worker] Updating profiles identity snapshot', {
+        applicantId: input.applicantId,
+        fields: Object.keys(profilePatch),
+      })
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .update(profilePatch)
@@ -111,6 +131,9 @@ export async function updateCandidateProfileFromCvParse(
   }
 
   if (input.applicationId) {
+    console.info('[cv-parser-worker] Updating application status to cv_screening', {
+      applicationId: input.applicationId,
+    })
     const { error: applicationStatusError } = await supabaseAdmin
       .from('applications')
       .update({
