@@ -29,6 +29,7 @@ export default function AssessmentLobbyPage() {
   const [micAvailable, setMicAvailable] = useState(true)
   const [jobTitle, setJobTitle] = useState<string>('Loading...')
   const [orgName, setOrgName] = useState<string>('')
+  const [designStatus, setDesignStatus] = useState<UserTaskStatus>('not_started')
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -56,13 +57,32 @@ export default function AssessmentLobbyPage() {
         console.error('Failed to fetch job details', err)
       })
     }
-  }, [applicationId])
+  }, [applicationId, session?.access_token])
+
+  useEffect(() => {
+    if (!applicationId || !session?.access_token) return
+
+    fetch(`/api/v1/candidate/system-design-status?applicationId=${applicationId}`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      cache: 'no-store',
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.data?.status) {
+          setDesignStatus(data.data.status)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch system design status', err)
+      })
+  }, [applicationId, session?.access_token])
 
   if (authLoading) return null
 
   const voiceStatus: UserTaskStatus = 'not_started'
   const codingStatus: UserTaskStatus = 'not_started'
-  const designStatus: UserTaskStatus = 'not_started'
 
   return (
     <div className="min-h-screen bg-theme-bg transition-colors">
@@ -157,7 +177,7 @@ export default function AssessmentLobbyPage() {
               icon={Layout}
               description="Architect a scalable solution based on a given complex scenario."
               status={designStatus}
-              onClick={() => router.push('/interview/design')}
+              onClick={() => router.push(`/candidate/${applicationId}/assessment/system-design`)}
             />
           </div>
 

@@ -117,6 +117,7 @@ function TranscriptBubble({ role, text, isPartial }: TranscriptBubbleProps) {
 export function TranscriptDisplayMobile({
   transcripts,
   currentTranscript,
+  currentRole,
 }: TranscriptDisplayProps) {
   const lastTranscript = transcripts[transcripts.length - 1]
   const displayText = currentTranscript || lastTranscript?.text
@@ -132,7 +133,7 @@ export function TranscriptDisplayMobile({
   }
 
   const role = currentTranscript
-    ? (currentTranscript.length > 0 ? 'user' : 'assistant')
+    ? (currentRole ?? 'assistant')
     : lastTranscript?.role
 
   return (

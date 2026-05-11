@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import type { CodingProblem } from '@/types/codingProblem'
 
@@ -21,10 +21,15 @@ export interface UseCodingProblemsReturn {
 export function useCodingProblems(): UseCodingProblemsReturn {
 	const { session } = useAuth()
 	const [codingProblems, setCodingProblems] = useState<CodingProblem[]>([])
+	const [activeProblem, setActiveProblem] = useState<CodingProblem | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	const activeProblem = useMemo(() => codingProblems[0] ?? null, [codingProblems])
+	const pickRandomProblem = useCallback((problems: CodingProblem[]) => {
+		if (problems.length === 0) return null
+		const index = Math.floor(Math.random() * problems.length)
+		return problems[index] ?? null
+	}, [])
 
 	const getAuthHeaders = useCallback(() => {
 		if (!session?.access_token) {
@@ -66,7 +71,8 @@ export function useCodingProblems(): UseCodingProblemsReturn {
 				count: problems.length,
 				problems: problems.map(p => ({ id: p.id, title: p.title })),
 			})
-			setCodingProblems(problems);
+			setCodingProblems(problems)
+			setActiveProblem(pickRandomProblem(problems))
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to fetch coding problems'	
 				console.error('[useCodingProblems] Error fetching problems:', message);
@@ -74,7 +80,7 @@ export function useCodingProblems(): UseCodingProblemsReturn {
 		} finally {
 			setLoading(false)
 		}
-	}, [getAuthHeaders, session?.access_token])
+	}, [getAuthHeaders, pickRandomProblem, session?.access_token])
 
 	useEffect(() => {
 		if (session?.access_token) {

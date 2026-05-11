@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import type { JobPosting } from '@/types/job'
 
-type PublicJob = Pick<JobPosting, 'id' | 'title' | 'employment_type' | 'work_mode' | 'location' | 'application_deadline' | 'description' | 'responsibilities' | 'requirements' | 'benefits'> & {
+type PublicJob = Pick<JobPosting, 'id' | 'title' | 'employment_type' | 'work_mode' | 'location' | 'application_deadline' | 'description' | 'responsibilities' | 'requirements' | 'benefits' | 'status'> & {
   organization_name?: string | null
 }
 
@@ -115,7 +115,8 @@ export default function CandidateJobsPage() {
 
         const data: JobsResponse = await response.json()
         if (isMounted) {
-          setJobs(data.jobs)
+          setJobs(data.jobs.filter((job) => job.status === 'published')) // Ensure only published jobs are shown
+          console.log('Fetched jobs:', data.jobs) // Debug log to verify data structure
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch jobs'

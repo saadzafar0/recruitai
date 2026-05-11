@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { useVapi } from '@/hooks/useVapi'
+import { useVapi, type UseVapiOptions } from '@/hooks/useVapi'
 import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 import { InterviewAvatar } from './InterviewAvatar'
 import { InterviewControls, InterviewControlsMobile } from './InterviewControls'
@@ -16,6 +16,7 @@ import { TranscriptDisplay, TranscriptDisplayMobile } from './TranscriptDisplay'
 interface VapiInterviewRoomProps {
   backPath?: string
   badgeLabel?: string
+  onDebugEvent?: UseVapiOptions['onDebugEvent']
 }
 
 function shouldDisplayInterviewError(error: string | null): boolean {
@@ -30,7 +31,7 @@ function shouldDisplayInterviewError(error: string | null): boolean {
   )
 }
 
-export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock Interview' }: VapiInterviewRoomProps) {
+export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock Interview', onDebugEvent }: VapiInterviewRoomProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const applicationId = useMemo(() => {
@@ -50,7 +51,7 @@ export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock 
     endCall,
     toggleMute,
     isMuted,
-  } = useVapi()
+  } = useVapi({ onDebugEvent })
 
   const handleStartCall = useCallback(() => {
     void startCall(applicationId)
@@ -192,6 +193,7 @@ export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock 
             <TranscriptDisplayMobile
               transcripts={transcripts}
               currentTranscript={currentTranscript}
+              currentRole={currentRole}
             />
           </div>
         )}

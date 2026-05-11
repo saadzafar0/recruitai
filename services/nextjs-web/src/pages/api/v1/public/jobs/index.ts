@@ -14,6 +14,7 @@ interface PublicJobPosting {
   responsibilities: string | null
   requirements: string | null
   benefits: string | null
+  status: string | null
 }
 
 export default async function handler(
@@ -33,7 +34,8 @@ export default async function handler(
 
   const { data: jobs, error } = await supabaseAdmin
     .from('job_postings')
-    .select('id, title, location, employment_type, work_mode, application_deadline, created_at, description, responsibilities, requirements, benefits, organizations(name)')
+    .select('id, title, location, employment_type, work_mode, application_deadline, created_at, description, responsibilities, requirements, benefits,status, organizations(name)')
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -53,6 +55,7 @@ export default async function handler(
     responsibilities: job.responsibilities ?? null,
     requirements: job.requirements ?? null,
     benefits: job.benefits ?? null,
+    status: job.status ?? null,
   }))
 
   return res.status(200).json({ jobs: mapped })

@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
+import { Suspense, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Code2, Layout, Mic } from 'lucide-react'
-import { Suspense } from 'react'
 import { VapiInterviewRoom } from '@/components/mock-interview'
 
 type InterviewKind = 'voice' | 'coding' | 'design' | 'unknown'
@@ -22,12 +21,20 @@ export default function UserInterviewPage() {
   const router = useRouter()
   const params = useParams<{ id?: string | string[] }>()
 
+  const handleVapiDebug = useCallback((event: { type: string; payload?: unknown }) => {
+    console.debug('[VAPI]', event.type, event.payload ?? '')
+  }, [])
+
   const interviewKind = useMemo(() => resolveInterviewKind(params?.id), [params])
 
   if (interviewKind === 'voice') {
     return (
       <Suspense fallback={null}>
-        <VapiInterviewRoom backPath="/candidate" badgeLabel="Voice Interview" />
+        <VapiInterviewRoom
+          backPath="/candidate"
+          badgeLabel="Voice Interview"
+          onDebugEvent={handleVapiDebug}
+        />
       </Suspense>
     )
   }
