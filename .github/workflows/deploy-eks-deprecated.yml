@@ -1,0 +1,89 @@
+# DEPRECATED — production path is two EC2s + Docker Compose.
+# Use: docs/deployment-ec2-docker.md  and  workflow  deploy-ec2.yml
+#
+# This workflow remains for manual Docker Hub pushes only (no EC2 deploy job).
+# Kubernetes manifests live under infra/kubernetes-deprecated (reference only).
+#
+# Repository configuration (Settings → Secrets and variables → Actions):
+#   - Variable:  DOCKERHUB_USERNAME
+#   - Secret:     DOCKERHUB_TOKEN
+#
+# Images (executor not in matrix — use deploy-ec2 for all four services):
+#   {DOCKERHUB_USERNAME}/recruitai-nextjs-web
+#   {DOCKERHUB_USERNAME}/recruitai-cv-parser-worker
+#   {DOCKERHUB_USERNAME}/recruitai-evaluator-worker
+
+name: deploy-eks-deprecated
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-eks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build-and-push:
+    name: 'Image: ${{ matrix.image }}'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: nextjs-web, image: recruitai-nextjs-web }
+          - { service: cv-parser-worker, image: recruitai-cv-parser-worker }
+          - { service: evaluator-worker, image: recruitai-evaluator-worker }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Hub namespace
+        run: |
+          if [ -z "$DOCKERHUB_USER" ]; then
+            echo "::error::Set the Actions repository variable DOCKERHUB_USERNAME to your Docker Hub user or org."
+            exit 1
+          fi
+        env:
+          DOCKERHUB_USER: ${{ vars.DOCKERHUB_USERNAME }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ (vars.DOCKERHUB_USERNAME != '' && vars.DOCKERHUB_USERNAME) || 'unconfigured' }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable=${{ (github.ref_name == 'main' || github.ref_name == 'master') && github.event_name == 'push' }}
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        id: build
+        # v7 (BuildKit) — use path context (see "context" below) so the repo checkout and .dockerignore apply.
+        uses: docker/build-push-action@v7
+        with:
+          context: ./services/${{ matrix.service }}
+          push: ${{ vars.DOCKERHUB_USERNAME != '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Image digest
+        run: echo "Digest ${{ steps.build.outputs.digest }}"

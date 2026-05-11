@@ -88,7 +88,7 @@ export default async function handler(
 
 async function handleGet(
   res: NextApiResponse<Organization | { error: string } | null>,
-  profile: { id: string; organization_id: string | null }
+  profile: { id: string; organization_id: string | null; role: string }
 ) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Server configuration error' })
@@ -115,7 +115,7 @@ async function handleGet(
 async function handlePost(
   req: NextApiRequest,
   res: NextApiResponse<Organization | { error: string }>,
-  profile: { id: string; organization_id: string | null }
+  profile: { id: string; organization_id: string | null; role: string }
 ) {
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Server configuration error' })

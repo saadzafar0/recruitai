@@ -1,3 +1,5 @@
+> **Deployment:** The **current** production-style plan is **[deployment-ec2-docker.md](./deployment-ec2-docker.md)** (two EC2s, Docker Compose). This file documents an **older EKS-oriented** setup for historical reference.
+
 ### Phase 1: Local AWS CLI Setup
 
 * [x] Created an IAM User (`saad-devops-admin`) in the AWS Console with `AdministratorAccess`.

@@ -3,7 +3,7 @@ Here is the updated Markdown with the `regcred` task removed:
 ## 🏃 Sprint 2 — Microservices, Vapi & CV Pipeline
 
 **Saad Zafar:**
-* Set up GitHub Actions CI/CD (`deploy-eks.yml`) — build all 4 Docker images and push to Docker Hub
+* Set up GitHub Actions CI/CD — use **`deploy-ec2.yml`** (Docker Hub → two EC2); legacy **`deploy-eks-deprecated.yml`** for manual EKS-era image builds only
 * Write all 4 Kubernetes deployment + service manifests (`nextjs-web.yaml`, `executor-worker.yaml`, `evaluator-worker.yaml`, `cv-parser-worker.yaml`)
 * Create Kubernetes secrets for all environment variables (Supabase, Vapi, Gemini, Judge0 keys)
 * Build the `api/v1/webhooks/vapi.ts` endpoint — receive the Vapi call-end payload, extract the transcript, and save it to the correct candidate record in Supabase

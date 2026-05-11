@@ -1,5 +1,9 @@
-# Next.js 14 + standalone output — see next.config.js (output: 'standalone')
-# https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile
+# Next.js 14 + standalone — see next.config.js (output: 'standalone')
+#
+# Build uses placeholder NEXT_PUBLIC_* so CI can build without secrets.
+# On EC2, set real values with Compose env_file / environment (injected into process.env at runtime).
+# For client bundles matching production, rebuild with --build-arg NEXT_PUBLIC_* or local .env during build.
+
 FROM node:20-alpine AS base
 ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -12,18 +16,27 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
+
+ARG NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-key
+ARG NEXT_PUBLIC_VAPI_PUBLIC_KEY=
+ARG NEXT_PUBLIC_VAPI_ASSISTANT_ID=
+
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_VAPI_PUBLIC_KEY=$NEXT_PUBLIC_VAPI_PUBLIC_KEY
+ENV NEXT_PUBLIC_VAPI_ASSISTANT_ID=$NEXT_PUBLIC_VAPI_ASSISTANT_ID
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build-time: Next collects page data; createClient in src/lib/supabase.ts needs these.
-# Real values are injected at runtime in EKS (not baked into the image).
-ENV NEXT_PUBLIC_SUPABASE_URL="https://dummy.supabase.co"
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY="dummy-key"
 RUN pnpm build
 
 FROM base AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public

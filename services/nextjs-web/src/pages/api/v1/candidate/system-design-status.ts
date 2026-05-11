@@ -78,7 +78,7 @@ export default async function handler(
     return res.status(200).json({ success: true, data: { status: 'not_started' } })
   }
 
-  const { data: responseCount, error: responseError } = await supabaseAdmin
+  const { count: responseCount, error: responseError } = await supabaseAdmin
     .from('system_design_responses')
     .select('id', { count: 'exact', head: true })
     .eq('assessment_id', assessment.id)

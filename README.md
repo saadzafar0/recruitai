@@ -20,9 +20,9 @@
 * **Code Execution:** Judge0
 * **Background Jobs:** BullMQ + Redis
 * **File Storage:** Amazon S3 (CVs and Portfolios)
-* **Infrastructure:** AWS EKS (Kubernetes)
+* **Infrastructure (current plan):** Two **AWS EC2** instances + **Docker Compose** ([docs/deployment-ec2-docker.md](docs/deployment-ec2-docker.md)); **Kubernetes / EKS manifests are deprecated** under `infra/kubernetes-deprecated/`.
 * **Container Registry:** Docker Hub
-* **CI/CD:** GitHub Actions
+* **CI/CD:** GitHub Actions (`deploy-ec2.yml` for EC2 deploys)
 
 ## 📂 Architecture & Folder Structure
 
@@ -30,12 +30,15 @@ RecruitAI is structured as a monorepo utilizing a microservices architecture to 
 
 ```text
 recruitai/
-├── .github/workflows/          # CI/CD pipelines (GitHub Actions -> Docker Hub -> EKS)
+├── .github/workflows/          # deploy-ec2.yml (Docker Hub → EC2); deploy-eks-deprecated.yml (legacy)
+├── docs/
+│   └── deployment-ec2-docker.md   # Current deployment plan
 ├── schemas/                    # Shared JSON schemas for queue payloads
 ├── services/
 │   ├── nextjs-web/             # Core Next.js frontend and Vapi/Supabase webhooks
 │   ├── executor-worker/        # BullMQ worker for Judge0 code execution
 │   ├── evaluator-worker/       # BullMQ worker for heavy LLM reasoning (System Design)
 │   └── cv-parser-worker/       # BullMQ worker for extracting data from S3 PDFs
-├── infra/kubernetes/           # EKS deployment, service, and ingress manifests
+├── infra/kubernetes-deprecated/  # EKS manifests (deprecated; reference only)
 └── docker-compose.yml          # Local multi-container development environment
+```
