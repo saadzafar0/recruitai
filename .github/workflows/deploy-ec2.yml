@@ -1,4 +1,6 @@
 # Build all service images → Docker Hub → SSH deploy to two EC2 hosts (web + workers).
+# nextjs-web image: pass NEXT_PUBLIC_* build-args (vars/secrets below) so the browser bundle
+# is not stuck on dummy.supabase.co. Runtime EC2 .env is not enough for client-side Supabase.
 # Ensures /app, writes docker-compose.yml from DOCKERHUB_USERNAME, uploads .env from secrets,
 # then compose pull + up. See docs/github-actions-environment.md
 name: deploy-ec2
@@ -59,6 +61,21 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Verify Next.js public env for web Docker build
+        if: matrix.service == 'nextjs-web'
+        env:
+          URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL != '' && vars.NEXT_PUBLIC_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          ANON: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "${URL}" ]; then
+            echo "::error::Set **variable** or **secret** NEXT_PUBLIC_SUPABASE_URL for CI. It is baked into the Next.js client at docker build; EC2_WEB_ENV_FILE alone cannot fix sign-in."
+            exit 1
+          fi
+          if [ -z "${ANON}" ]; then
+            echo "::error::Set **secret** NEXT_PUBLIC_SUPABASE_ANON_KEY (anon key for the browser bundle at docker build; same value as in EC2_WEB_ENV_FILE)."
+            exit 1
+          fi
+
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
@@ -81,6 +98,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+          # nextjs-web Dockerfile consumes these; other service Dockerfiles ignore unused args.
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL != '' && vars.NEXT_PUBLIC_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_VAPI_PUBLIC_KEY=${{ vars.NEXT_PUBLIC_VAPI_PUBLIC_KEY != '' && vars.NEXT_PUBLIC_VAPI_PUBLIC_KEY || secrets.NEXT_PUBLIC_VAPI_PUBLIC_KEY }}
+            NEXT_PUBLIC_VAPI_ASSISTANT_ID=${{ vars.NEXT_PUBLIC_VAPI_ASSISTANT_ID != '' && vars.NEXT_PUBLIC_VAPI_ASSISTANT_ID || secrets.NEXT_PUBLIC_VAPI_ASSISTANT_ID }}
 
       - name: Image digest
         run: echo "Digest ${{ steps.build.outputs.digest }}"

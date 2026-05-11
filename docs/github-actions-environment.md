@@ -138,6 +138,10 @@ Merge the variables needed by **executor**, **evaluator**, and **cv-parser** int
 
 | Name | Type | Purpose |
 |------|------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | **Variable** or **Secret** | Baked into **nextjs-web** image at **docker build** (browser Supabase client). Must match your project; **not** satisfied by `EC2_WEB_ENV_FILE` alone. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Secret** | Same anon key as in `EC2_WEB_ENV_FILE`; required at **docker build** for the client bundle. |
+| `NEXT_PUBLIC_VAPI_PUBLIC_KEY` | **Variable** or **Secret** (optional) | Client Vapi widget; same as build-time needs in production. |
+| `NEXT_PUBLIC_VAPI_ASSISTANT_ID` | **Variable** or **Secret** (optional) | Client Vapi assistant id. |
 | `DOCKERHUB_USERNAME` | **Variable** | Image namespace |
 | `DOCKERHUB_TOKEN` | **Secret** | Push images |
 | `WEB_EC2_IP` | **Secret** | Web host |
