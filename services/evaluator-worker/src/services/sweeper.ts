@@ -49,7 +49,9 @@ async function findUnscoredVoiceSessions(limit: number): Promise<UnscoredVoiceRo
 		.select('session_id')
 
 	const scoredIds = new Set<string>(
-		(scored || []).map((r) => (r as { session_id: string }).session_id).filter(Boolean),
+		(scored || [])
+			.map((r: { session_id?: string }) => r.session_id)
+			.filter((id): id is string => Boolean(id)),
 	)
 
 	const { data, error } = await supabaseAdmin
@@ -64,16 +66,17 @@ async function findUnscoredVoiceSessions(limit: number): Promise<UnscoredVoiceRo
 		return []
 	}
 
+	type VoiceSessionRow = { id: string; application_id: string; full_transcript: string | null }
+
 	return (data || [])
-		.filter((row) => {
-			const r = row as { id: string; full_transcript: string | null }
-			return !scoredIds.has(r.id) && (r.full_transcript || '').trim().length > 0
+		.filter((row: VoiceSessionRow) => {
+			return (
+				!scoredIds.has(row.id) &&
+				(row.full_transcript || '').trim().length > 0
+			)
 		})
 		.slice(0, limit)
-		.map((row) => {
-			const r = row as { id: string; application_id: string }
-			return { id: r.id, application_id: r.application_id }
-		})
+		.map((row: VoiceSessionRow) => ({ id: row.id, application_id: row.application_id }))
 }
 
 async function findUnscoredDesignResponses(limit: number): Promise<UnscoredDesignRow[]> {
@@ -88,12 +91,19 @@ async function findUnscoredDesignResponses(limit: number): Promise<UnscoredDesig
 		return []
 	}
 
+	type DesignResponseRow = {
+		id: string
+		assessment_id: string
+		written_response: string | null
+		transcript: string | null
+		system_design_assessments: UnscoredDesignRow['system_design_assessments']
+	}
+
 	return (data || [])
-		.filter((row) => {
-			const r = row as { written_response: string | null; transcript: string | null }
-			return (r.written_response || r.transcript || '').trim().length > 0
+		.filter((row: DesignResponseRow) => {
+			return (row.written_response || row.transcript || '').trim().length > 0
 		})
-		.slice(0, limit) as unknown as UnscoredDesignRow[]
+		.slice(0, limit) as UnscoredDesignRow[]
 }
 
 function pickApplicationId(row: UnscoredDesignRow): string | null {
