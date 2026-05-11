@@ -46,28 +46,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Fetch user profile from profiles table
-  const fetchProfile = async (supabaseUser: SupabaseUser): Promise<UserProfile | null> => {
+  const mapProfileRow = (data: {
+    id: string
+    email: string
+    first_name: string
+    last_name: string
+    role: string
+    avatar_url: string | null
+    organization_id: string | null
+  }): UserProfile => ({
+    id: data.id,
+    email: data.email,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    role: data.role as UserRole,
+    avatarUrl: data.avatar_url ?? undefined,
+    organizationId: data.organization_id ?? undefined,
+  })
+
+  /** One read; 0 rows → null without PGRST116 / 406 */
+  const fetchProfileOnce = async (supabaseUser: SupabaseUser): Promise<UserProfile | null> => {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, email, first_name, last_name, role, avatar_url, organization_id')
       .eq('id', supabaseUser.id)
-      .single()
+      .maybeSingle()
 
-    if (error || !data) {
+    if (error) {
       console.error('Error fetching profile:', error)
       return null
     }
+    if (!data) return null
+    return mapProfileRow(data)
+  }
 
-    return {
-      id: data.id,
-      email: data.email,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      role: data.role as UserRole,
-      avatarUrl: data.avatar_url,
-      organizationId: data.organization_id,
+  /** Retries: SIGNED_IN can fire before client insert finishes; slight DB lag */
+  const fetchProfileWithRetry = async (
+    supabaseUser: SupabaseUser,
+    opts?: { maxAttempts?: number; delayMs?: number },
+  ): Promise<UserProfile | null> => {
+    const maxAttempts = opts?.maxAttempts ?? 10
+    const delayMs = opts?.delayMs ?? 120
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const profile = await fetchProfileOnce(supabaseUser)
+      if (profile) return profile
+      if (attempt < maxAttempts - 1) {
+        await new Promise((r) => setTimeout(r, delayMs))
+      }
     }
+    return null
   }
 
   // Initialize auth state
@@ -78,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(initialSession)
 
         if (initialSession?.user) {
-          const profile = await fetchProfile(initialSession.user)
+          const profile = await fetchProfileWithRetry(initialSession.user)
           setUser(profile)
         }
       } catch (error) {
@@ -96,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession)
 
         if (event === 'SIGNED_IN' && newSession?.user) {
-          const profile = await fetchProfile(newSession.user)
+          const profile = await fetchProfileWithRetry(newSession.user)
           setUser(profile)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
@@ -175,14 +202,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: 'Failed to create user profile. Please try again.' }
       }
 
-      // 3. Set the user profile
-      setUser({
-        id: authData.user.id,
-        email,
-        firstName,
-        lastName,
-        role,
-      })
+      // 3. Sync session in React (onAuthStateChange can run before insert completes)
+      const { data: sessionData } = await supabase.auth.getSession()
+      setSession(sessionData.session ?? null)
+
+      // 4. Load from DB when visible to client; fallback keeps UI usable if RLS lags one tick
+      const profile = await fetchProfileWithRetry(authData.user, { maxAttempts: 8, delayMs: 100 })
+      setUser(
+        profile ?? {
+          id: authData.user.id,
+          email,
+          firstName,
+          lastName,
+          role,
+        },
+      )
 
       return { error: null }
     } catch (error) {
@@ -209,11 +243,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        const profile = await fetchProfile(data.user)
+        const profile = await fetchProfileWithRetry(data.user)
         if (!profile) {
           return { error: 'User profile not found. Please contact support.' }
         }
         setUser(profile)
+        setSession(data.session)
       }
 
       return { error: null }

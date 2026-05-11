@@ -43,9 +43,12 @@ export default async function handler(
     .from('profiles')
     .select('id, role')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
-  if (profileError || !profile) {
+  if (profileError) {
+    return res.status(500).json({ error: 'Failed to load profile' })
+  }
+  if (!profile) {
     return res.status(403).json({ error: 'Profile not found' })
   }
 

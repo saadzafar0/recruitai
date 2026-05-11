@@ -15,7 +15,7 @@ export interface UseCandidateSummaryReturn {
 }
 
 export function useCandidateSummary(): UseCandidateSummaryReturn {
-  const { session } = useAuth()
+  const { session, user } = useAuth()
   const [summary, setSummary] = useState<CandidateSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,6 +32,13 @@ export function useCandidateSummary(): UseCandidateSummaryReturn {
 
   const fetchSummary = useCallback(async () => {
     if (!session?.access_token) {
+      return
+    }
+    // Avoid 403 from candidate/summary until profile exists and role is applicant
+    if (!user || user.role !== 'applicant') {
+      setSummary(null)
+      setLoading(false)
+      setError(null)
       return
     }
 
@@ -57,13 +64,17 @@ export function useCandidateSummary(): UseCandidateSummaryReturn {
     } finally {
       setLoading(false)
     }
-  }, [getAuthHeaders, session?.access_token])
+  }, [getAuthHeaders, session?.access_token, user])
 
   useEffect(() => {
-    if (session?.access_token) {
-      fetchSummary()
+    if (!session?.access_token || !user || user.role !== 'applicant') {
+      setSummary(null)
+      setLoading(false)
+      setError(null)
+      return
     }
-  }, [fetchSummary, session?.access_token])
+    void fetchSummary()
+  }, [fetchSummary, session?.access_token, user])
 
   return {
     summary,
