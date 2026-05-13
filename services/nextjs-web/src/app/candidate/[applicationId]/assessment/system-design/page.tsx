@@ -52,9 +52,29 @@ export default function SystemDesignAssessmentPage() {
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'Failed to submit response')
+      }
+
+      const queueResponse = await fetch('/api/v1/system-design', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          application_id: applicationId,
+          assessment_id: data?.data?.assessmentId,
+          response_id: data?.data?.responseId,
+          question_id: activeProblem.id,
+        }),
+      })
+
+      if (!queueResponse.ok) {
+        const queueData = await queueResponse.json()
+        console.warn('[System Design] Failed to enqueue evaluation job', queueData)
       }
 
       router.push(`/candidate/${applicationId}/assessment`)

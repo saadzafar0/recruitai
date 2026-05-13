@@ -67,10 +67,18 @@ export interface UseVapiReturn {
   currentTranscript: string
   error: string | null
   volumeLevel: number
-  startCall: (applicationId?: string) => Promise<void>
+  startCall: (options?: string | StartCallOptions) => Promise<void>
   endCall: () => void
   toggleMute: () => void
   isMuted: boolean
+}
+
+export interface StartCallOptions {
+  applicationId?: string
+  interviewSessionId?: string
+  questionIds?: string[]
+  questionTexts?: string[]
+  fourQuestions?: string
 }
 
 export function useVapi(options: UseVapiOptions = {}): UseVapiReturn {
@@ -296,7 +304,7 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiReturn {
   }, [emitDebug, setStatusSafe])
 
   // Start a call with the configured assistant
-  const startCall = useCallback(async (applicationId?: string) => {
+  const startCall = useCallback(async (options?: string | StartCallOptions) => {
     const vapi = vapiRef.current
     if (!vapi) {
       setError('VAPI not initialized')
@@ -309,9 +317,18 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiReturn {
       return
     }
 
-    const trimmed = applicationId?.trim()
-    const assistantOverrides = trimmed
-      ? { variableValues: { applicationId: trimmed } }
+    const resolved = typeof options === 'string' ? { applicationId: options } : (options ?? {})
+    const trimmed = resolved.applicationId?.trim()
+
+    const variableValues: Record<string, unknown> = {}
+    if (trimmed) variableValues.applicationId = trimmed
+    if (resolved.interviewSessionId) variableValues.interviewSessionId = resolved.interviewSessionId
+    if (resolved.questionIds?.length) variableValues.interviewQuestionIds = resolved.questionIds
+    if (resolved.questionTexts?.length) variableValues.interviewQuestions = resolved.questionTexts
+    if (resolved.fourQuestions) variableValues.four_questions = resolved.fourQuestions
+
+    const assistantOverrides = Object.keys(variableValues).length > 0
+      ? { variableValues }
       : undefined
 
     try {

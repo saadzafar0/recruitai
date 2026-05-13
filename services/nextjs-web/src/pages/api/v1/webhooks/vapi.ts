@@ -182,7 +182,7 @@ export default async function handler(
 
   const savedSessionId = sessionRow?.id ?? null
   try {
-    const jobId = `voice:${savedSessionId || applicationId}`
+    const jobId = `voice-${savedSessionId || applicationId}`
     await voiceEvaluationQueue.add(
       'voice-evaluation',
       { applicationId, sessionId: savedSessionId ?? undefined },

@@ -147,7 +147,7 @@ export function startEvaluatorSweeper(): SweeperHandles {
 
 			const voiceRows = await findUnscoredVoiceSessions(batchSize)
 			for (const row of voiceRows) {
-				const jobId = `voice:${row.id}`
+				const jobId = `voice-${row.id}`
 				await voiceQueue.add(
 					'voice-evaluation',
 					{ applicationId: row.application_id, sessionId: row.id },
@@ -165,7 +165,7 @@ export function startEvaluatorSweeper(): SweeperHandles {
 			for (const row of designRows) {
 				const applicationId = pickApplicationId(row)
 				if (!applicationId) continue
-				const jobId = `design:${row.id}`
+				const jobId = `design-${row.id}`
 				await designQueue.add(
 					'system-design-evaluation',
 					{
