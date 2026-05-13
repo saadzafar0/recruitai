@@ -42,10 +42,17 @@ export default function CodingRoundsList() {
     return rounds.map((round) => {
       const initials = getInitials(round.candidate_name)
       return (
-        <button
+        <div
           key={round.assessment_id}
-          type="button"
           onClick={() => router.push(`/recruiter/candidate/${round.candidate_id}/assessment`)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              router.push(`/recruiter/candidate/${round.candidate_id}/assessment`)
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="w-full text-left rounded-lg p-4 sm:p-5 border flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 transition-all cursor-pointer bg-theme-card border-theme-border shadow-theme-card hover:border-accent-purple hover:shadow-[0_2px_8px_rgba(124,106,239,0.12)]"
         >
           <div className="flex items-center gap-3">
@@ -74,11 +81,18 @@ export default function CodingRoundsList() {
                 {formatScore(round.coding_score)}/100
               </span>
             </div>
-            <span className="px-3 py-1.5 text-xs border rounded transition-colors cursor-pointer border-accent-purple text-accent-purple">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                router.push(`/recruiter/candidate/${round.candidate_id}/assessment`)
+              }}
+              className="px-3 py-1.5 text-xs border rounded transition-colors border-accent-purple text-accent-purple hover:bg-accent-purple hover:text-white"
+            >
               View Code
-            </span>
+            </button>
           </div>
-        </button>
+        </div>
       )
     })
   }, [rounds, router])
@@ -86,7 +100,7 @@ export default function CodingRoundsList() {
   return (
     <div className="p-4 sm:p-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-xl sm:text-[1.375rem] font-semibold text-text-primary">Assessments</h1>
+        <h1 className="text-xl sm:text-[1.375rem] font-semibold text-text-primary">Coding Round</h1>
         <p className="text-sm mt-0.5 text-text-secondary">
           {rounds.length} submitted coding assessments
         </p>
@@ -100,7 +114,7 @@ export default function CodingRoundsList() {
 
       {loading && (
         <div className="rounded-lg border bg-theme-card border-theme-border p-6 text-sm text-text-secondary">
-          Loading assessments...
+          Loading coding rounds...
         </div>
       )}
 

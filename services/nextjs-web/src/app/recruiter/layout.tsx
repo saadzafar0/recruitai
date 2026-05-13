@@ -7,7 +7,7 @@ function getRecruiterTitle(pathname: string): string {
   if (pathname === '/recruiter') return 'Dashboard'
   if (pathname.startsWith('/recruiter/candidate')) return 'Candidates'
   if (pathname.startsWith('/recruiter/interview')) return 'Interviews'
-  if (pathname.startsWith('/recruiter/coding-round')) return 'Assessments'
+  if (pathname.startsWith('/recruiter/coding-round')) return 'Coding Round'
   if (pathname.startsWith('/recruiter/jobs')) return 'Job Postings'
   if (pathname.startsWith('/recruiter/organization')) return 'Organization'
   if (pathname.startsWith('/recruiter/settings')) return 'Settings'

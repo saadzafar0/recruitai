@@ -42,10 +42,17 @@ export default function InterviewsList() {
     return interviews.map((interview) => {
       const initials = getInitials(interview.candidate_name)
       return (
-        <button
+        <div
           key={interview.session_id}
-          type="button"
           onClick={() => router.push(`/recruiter/candidate/${interview.candidate_id}/interview`)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              router.push(`/recruiter/candidate/${interview.candidate_id}/interview`)
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="w-full text-left rounded-lg p-4 sm:p-5 border flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 transition-all cursor-pointer bg-theme-card border-theme-border shadow-theme-card hover:border-accent-purple hover:shadow-[0_2px_8px_rgba(124,106,239,0.12)]"
         >
           <div className="flex items-center gap-3">
@@ -68,11 +75,18 @@ export default function InterviewsList() {
                 {formatScore(interview.voice_score)}/100
               </span>
             </div>
-            <span className="px-3 py-1.5 text-xs border rounded transition-colors cursor-pointer border-accent-purple text-accent-purple">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                router.push(`/recruiter/candidate/${interview.candidate_id}/interview`)
+              }}
+              className="px-3 py-1.5 text-xs border rounded transition-colors border-accent-purple text-accent-purple hover:bg-accent-purple hover:text-white"
+            >
               View Analytics
-            </span>
+            </button>
           </div>
-        </button>
+        </div>
       )
     })
   }, [interviews, router])
