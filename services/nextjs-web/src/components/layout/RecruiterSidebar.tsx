@@ -33,9 +33,9 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/recruiter', active: true },
   { label: 'Organization', icon: Building2, href: '/recruiter/organization', active: true },
   { label: 'Job Postings', icon: Briefcase, href: '/recruiter/jobs', active: true },
-  { label: 'Candidates', icon: Users, href: '/recruiter/candidates' },
-  { label: 'Interviews', icon: Mic, href: '/recruiter/interviews' },
-  { label: 'Assessments', icon: Code2, href: '/recruiter/assessments' },
+  { label: 'Candidates', icon: Users, href: '/recruiter/candidate', active: true },
+  { label: 'Interviews', icon: Mic, href: '/recruiter/interview', active: true },
+  { label: 'Assessments', icon: Code2, href: '/recruiter/coding-round', active: true },
   { label: 'Settings', icon: Settings, href: '/recruiter/settings' },
 ]
 
