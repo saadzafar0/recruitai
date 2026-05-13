@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Editor, { type BeforeMount } from '@monaco-editor/react'
 import { Play, CheckCircle, XCircle, ChevronDown } from 'lucide-react'
 import { useCodingProblems } from '@/hooks/useCodingProblems'
+import { useAuth } from '@/context/AuthContext'
 
 const starterCode: Record<string, string> = {
 	Python: `def solve():
@@ -52,6 +54,8 @@ function formatTime(seconds: number) {
 }
 
 export default function CodingAssessment({ applicationId }: { applicationId?: string }) {
+	const router = useRouter()
+	const { session } = useAuth()
 	const { activeProblem, loading: problemLoading, error: problemError } = useCodingProblems()
 	const [language, setLanguage] = useState('Python')
 	const [code, setCode] = useState(starterCode.Python)
@@ -62,6 +66,8 @@ export default function CodingAssessment({ applicationId }: { applicationId?: st
 	const [submissionStatus, setSubmissionStatus] = useState('')
 	const [lastVerdict, setLastVerdict] = useState('')
 	const [jobId, setJobId] = useState('')
+	const [hasRunOnce, setHasRunOnce] = useState(false)
+	const [finalizeError, setFinalizeError] = useState('')
 
 	const sampleTestCases = useMemo(() => {
 		if (!activeProblem) {
@@ -186,6 +192,7 @@ export default function CodingAssessment({ applicationId }: { applicationId?: st
 
 		setIsSubmitting(true)
 		setSubmissionError('')
+		setFinalizeError('')
 		setSubmissionStatus('Submitting...')
 		setConsoleOutput('Submitting to Judge0...\n')
 
@@ -233,6 +240,7 @@ export default function CodingAssessment({ applicationId }: { applicationId?: st
 				job_id: data.data?.job_id,
 				status: data.data?.status,
 			})
+			setHasRunOnce(true)
 			setJobId(data.data?.job_id || '')
 			setSubmissionStatus('Queued')
 			setConsoleOutput('Submission queued. Waiting for results...')
@@ -250,6 +258,50 @@ export default function CodingAssessment({ applicationId }: { applicationId?: st
 			}
 		} finally {
 			setIsSubmitting(false)
+		}
+	}
+
+	const handleFinalize = async () => {
+		if (!hasRunOnce) {
+			setFinalizeError('Run the code once to get results')
+			return
+		}
+
+		if (!applicationId) {
+			setFinalizeError('Missing application id. Return to the assessment lobby and try again.')
+			return
+		}
+
+		if (!session?.access_token) {
+			setFinalizeError('You must be signed in to finalise this round.')
+			return
+		}
+
+		try {
+			const response = await fetch('/api/v1/candidate/coding-finalize', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${session.access_token}`,
+				},
+				body: JSON.stringify({ application_id: applicationId }),
+			})
+
+			const data = await response.json()
+			if (!response.ok) {
+				throw new Error(data.error || 'Failed to finalise submission')
+			}
+
+			try {
+				localStorage.setItem(`codingStatus:${applicationId}`, 'completed')
+			} catch {
+				// Ignore local storage failures.
+			}
+
+			router.push(`/candidate/${applicationId}/assessment`)
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to finalise submission'
+			setFinalizeError(message)
 		}
 	}
 
@@ -566,6 +618,21 @@ export default function CodingAssessment({ applicationId }: { applicationId?: st
 								</p>
 							</div>
 						)}
+
+						<div className="mt-4 border-t border-border pt-3">
+							{finalizeError ? (
+								<div className="mb-2 flex items-start gap-2 rounded border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
+									{finalizeError}
+								</div>
+							) : null}
+							<button
+								type="button"
+								onClick={handleFinalize}
+								className="w-full py-2.5 text-xs font-bold rounded transition-colors cursor-pointer bg-accent-purple hover:bg-accent-purple-hover text-white"
+							>
+								Finalise Submission
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { randomInt } from 'node:crypto'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase'
 
@@ -19,15 +20,14 @@ type ApiResponse = {
 
 function pickRandom<T>(items: T[], count: number): T[] {
   if (items.length <= count) return [...items]
-  const picked: T[] = []
-  const used = new Set<number>()
-  while (picked.length < count) {
-    const index = Math.floor(Math.random() * items.length)
-    if (used.has(index)) continue
-    used.add(index)
-    picked.push(items[index])
+  const arr = [...items]
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = randomInt(0, i + 1)
+    const tmp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = tmp
   }
-  return picked
+  return arr.slice(0, count)
 }
 
 export default async function handler(
@@ -92,6 +92,16 @@ export default async function handler(
     return res.status(403).json({ success: false, error: 'Access denied' })
   }
 
+  const { data: existingSession, error: sessionLoadError } = await supabaseAdmin
+    .from('interview_sessions')
+    .select('id, device_info')
+    .eq('application_id', payload.application_id)
+    .maybeSingle()
+
+  if (sessionLoadError) {
+    return res.status(500).json({ success: false, error: 'Failed to load interview session' })
+  }
+
   const { data: questionRows, error: questionError } = await supabaseAdmin
     .from('interview_questions')
     .select('id, question_text, is_active')
@@ -101,8 +111,20 @@ export default async function handler(
     return res.status(500).json({ success: false, error: 'No interview questions available' })
   }
 
+  const priorIds = new Set<string>()
+  const deviceInfo = (existingSession?.device_info as Record<string, unknown> | null) || null
+  const prior = deviceInfo?.interview_question_ids
+  if (Array.isArray(prior)) {
+    for (const id of prior) {
+      if (typeof id === 'string' && id.trim()) priorIds.add(id)
+    }
+  }
+
   const count = payload.question_count ?? 4
-  const picked = pickRandom(questionRows, count)
+  const eligible = priorIds.size > 0
+    ? questionRows.filter((row) => !priorIds.has(row.id as string))
+    : questionRows
+  const picked = pickRandom(eligible.length >= count ? eligible : questionRows, count)
   const questions = picked.map((row) => ({
     id: row.id as string,
     text: row.question_text as string,
@@ -112,16 +134,6 @@ export default async function handler(
     interview_question_ids: questions.map((q) => q.id),
     interview_question_texts: questions.map((q) => q.text),
     interview_questions_picked_at: new Date().toISOString(),
-  }
-
-  const { data: existingSession, error: sessionLoadError } = await supabaseAdmin
-    .from('interview_sessions')
-    .select('id, device_info')
-    .eq('application_id', payload.application_id)
-    .maybeSingle()
-
-  if (sessionLoadError) {
-    return res.status(500).json({ success: false, error: 'Failed to load interview session' })
   }
 
   let sessionId: string

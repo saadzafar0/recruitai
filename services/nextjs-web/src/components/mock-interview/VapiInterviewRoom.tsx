@@ -65,6 +65,7 @@ export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const startTimestampRef = useRef<number | null>(null)
   const completionSentRef = useRef(false)
+  const redirectSentRef = useRef(false)
 
   const handleStartCall = useCallback(async () => {
     if (!applicationId) {
@@ -127,6 +128,22 @@ export function VapiInterviewRoom({ backPath = '/candidate', badgeLabel = 'Mock 
       completionSentRef.current = false
     })
   }, [applicationId, activeSessionId, buildTranscript, session?.access_token, status, transcripts])
+
+  useEffect(() => {
+    if (!applicationId) return
+    if (status !== 'ended') return
+    if (redirectSentRef.current) return
+
+    redirectSentRef.current = true
+
+    try {
+      localStorage.setItem(`voiceStatus:${applicationId}`, 'completed')
+    } catch {
+      // Ignore storage failures.
+    }
+
+    router.push(`/candidate/${applicationId}/assessment`)
+  }, [applicationId, router, status])
 
   useEffect(() => {
     if (!loading && !user) {

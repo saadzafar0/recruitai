@@ -24,12 +24,15 @@ export default function AssessmentLobbyPage() {
   const params = useParams<{ applicationId: string }>()
   const applicationId = params?.applicationId || ''
   const { user, loading: authLoading, session } = useAuth()
-  const { showError } = useToast()
+  const { showError, showSuccess } = useToast()
   
   const [micAvailable, setMicAvailable] = useState(true)
   const [jobTitle, setJobTitle] = useState<string>('Loading...')
   const [orgName, setOrgName] = useState<string>('')
   const [designStatus, setDesignStatus] = useState<UserTaskStatus>('not_started')
+  const [voiceStatus, setVoiceStatus] = useState<UserTaskStatus>('not_started')
+  const [codingStatus, setCodingStatus] = useState<UserTaskStatus>('not_started')
+  const [concluding, setConcluding] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,10 +82,80 @@ export default function AssessmentLobbyPage() {
       })
   }, [applicationId, session?.access_token])
 
+  useEffect(() => {
+    if (!applicationId || !session?.access_token) return
+
+    fetch(`/api/v1/candidate/voice-status?applicationId=${applicationId}`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      cache: 'no-store',
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.data?.status) {
+          setVoiceStatus(data.data.status)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch voice status', err)
+      })
+
+    fetch(`/api/v1/candidate/coding-status?applicationId=${applicationId}`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      cache: 'no-store',
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.data?.status) {
+          setCodingStatus(data.data.status)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch coding status', err)
+      })
+  }, [applicationId, session?.access_token])
+
   if (authLoading) return null
 
-  const voiceStatus: UserTaskStatus = 'not_started'
-  const codingStatus: UserTaskStatus = 'not_started'
+  const handleConcludeAssessments = async () => {
+    if (!applicationId) {
+      showError('Missing application id. Please refresh and try again.')
+      return
+    }
+
+    if (!session?.access_token) {
+      showError('You need to be signed in to conclude assessments.')
+      return
+    }
+
+    try {
+      setConcluding(true)
+      const response = await fetch('/api/v1/candidate/coding-finalize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ application_id: applicationId }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to conclude assessments')
+      }
+
+      showSuccess('Assessments concluded successfully.')
+      router.push('/candidate/confirmation')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to conclude assessments'
+      showError(message)
+    } finally {
+      setConcluding(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-theme-bg transition-colors">
@@ -186,6 +259,17 @@ export default function AssessmentLobbyPage() {
               Your progress is saved automatically. You can complete these rounds in any order, 
               but we recommend starting with the Voice Interview.
             </p>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleConcludeAssessments}
+              disabled={concluding}
+              className="px-5 py-2.5 text-sm font-semibold rounded bg-accent-purple text-white hover:bg-accent-purple-hover transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {concluding ? 'Concluding...' : 'Conclude Assessments'}
+            </button>
           </div>
         </section>
       </main>
