@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, User } from 'lucide-react'
-import { useAuth, UserRole } from '@/context/AuthContext'
+import { useAuth, SignupRole } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import {
   AuthCard,
@@ -16,29 +16,41 @@ import {
 } from '@/components/auth'
 import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 
-const ROLE_OPTIONS = [
+const ROLE_OPTIONS: { value: SignupRole; label: string }[] = [
   { value: 'recruiter', label: 'Recruiter' },
   { value: 'applicant', label: 'Candidate' },
 ]
+
+type SignupFormState = {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  confirm: string
+  role: SignupRole
+}
 
 export default function SignUp() {
   const router = useRouter()
   const { signUp } = useAuth()
   const { showSuccess, showError } = useToast()
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<SignupFormState>({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
     confirm: '',
-    role: 'recruiter' as UserRole,
+    role: 'recruiter',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const updateField = (key: string, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+  const updateField = (key: keyof SignupFormState, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: key === 'role' ? (value as SignupRole) : value,
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

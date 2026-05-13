@@ -4,8 +4,16 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 
-// Map frontend role names to database enum values
-export type UserRole = 'recruiter' | 'applicant'
+/** Matches DB `user_role` enum on `profiles.role`. */
+export type UserRole =
+  | 'applicant'
+  | 'recruiter'
+  | 'interviewer'
+  | 'hr_ops'
+  | 'admin'
+
+/** Roles allowed for self-service signup only. */
+export type SignupRole = 'recruiter' | 'applicant'
 
 export interface UserProfile {
   id: string
@@ -26,7 +34,7 @@ interface AuthContextType {
     password: string,
     firstName: string,
     lastName: string,
-    role: UserRole
+    role: SignupRole
   ) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -161,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     firstName: string,
     lastName: string,
-    role: UserRole
+    role: SignupRole
   ): Promise<{ error: string | null }> => {
     try {
       // 1. Create auth user

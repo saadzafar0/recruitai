@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
+import { embedOne } from '@/lib/utils'
 
 export default async function handler(
   req: NextApiRequest,
@@ -106,19 +107,23 @@ export default async function handler(
     return res.status(500).json({ error: 'Failed to fetch candidates' })
   }
 
-  const normalizedCandidates = (candidates || []).map((candidate) => ({
-    application_id: candidate.id,
-    applicant_id: candidate.applicant?.id || candidate.id,
-    status: candidate.status,
-    created_at: candidate.created_at,
-    cv_score: candidate.cv_score,
-    voice_score: candidate.voice_score,
-    coding_score: candidate.coding_score,
-    system_design_score: candidate.system_design_score,
-    composite_score: candidate.composite_score,
-    applicant: candidate.applicant || null,
-    job: candidate.job || null,
-  }))
+  const normalizedCandidates = (candidates || []).map((candidate) => {
+    const applicant = embedOne(candidate.applicant)
+    const job = embedOne(candidate.job)
+    return {
+      application_id: candidate.id,
+      applicant_id: applicant?.id || candidate.id,
+      status: candidate.status,
+      created_at: candidate.created_at,
+      cv_score: candidate.cv_score,
+      voice_score: candidate.voice_score,
+      coding_score: candidate.coding_score,
+      system_design_score: candidate.system_design_score,
+      composite_score: candidate.composite_score,
+      applicant,
+      job,
+    }
+  })
 
   return res.status(200).json({ candidates: normalizedCandidates })
 }

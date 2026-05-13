@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
+import { embedOne } from '@/lib/utils'
 
 export default async function handler(
   req: NextApiRequest,
@@ -108,7 +109,10 @@ export default async function handler(
     return res.status(500).json({ error: 'Failed to load application' })
   }
 
-  if (!application || !application.applicant) {
+  const applicantRow = embedOne(application?.applicant)
+  const jobRow = embedOne(application?.job)
+
+  if (!application || !applicantRow) {
     return res.status(404).json({ error: 'Candidate application not found' })
   }
 
@@ -125,9 +129,9 @@ export default async function handler(
 
   if (!assessment) {
     return res.status(200).json({
-      candidate_id: application.applicant.id,
-      candidate_name: `${application.applicant.first_name} ${application.applicant.last_name}`.trim(),
-      job_title: application.job?.title || 'Role not available',
+      candidate_id: applicantRow.id,
+      candidate_name: `${applicantRow.first_name} ${applicantRow.last_name}`.trim(),
+      job_title: jobRow?.title || 'Role not available',
       submitted_at: null,
       language: null,
       problem_title: null,
@@ -196,15 +200,17 @@ export default async function handler(
     }
   }
 
-  const candidateName = `${application.applicant.first_name} ${application.applicant.last_name}`.trim()
+  const problemRow = submission ? embedOne(submission.problem) : null
+
+  const candidateName = `${applicantRow.first_name} ${applicantRow.last_name}`.trim()
 
   return res.status(200).json({
-    candidate_id: application.applicant.id,
+    candidate_id: applicantRow.id,
     candidate_name: candidateName,
-    job_title: application.job?.title || 'Role not available',
+    job_title: jobRow?.title || 'Role not available',
     submitted_at: assessment.submitted_at || submission?.submitted_at || null,
     language: submission?.language || null,
-    problem_title: submission?.problem?.title || null,
+    problem_title: problemRow?.title || null,
     coding_score: application.coding_score ?? null,
     submission: submission
       ? {
