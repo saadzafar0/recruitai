@@ -194,6 +194,7 @@ export default function UserPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => router.push('/candidate/settings')}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded text-sm bg-theme-input border border-theme-border text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
               >
                 <Settings size={16} />
