@@ -9,7 +9,6 @@ const ApplicationSchema = z.object({
   job_id: z.string().uuid(),
 
   // Applicant personal info
-  email: z.string().email(),
   first_name: z.string().min(1).max(100),
   last_name: z.string().min(1).max(100),
   phone: z.string().optional(),
@@ -74,12 +73,37 @@ export default async function handler(
   }
 
   try {
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+
+    if (authError || !user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token',
+        details: authError,
+      })
+    }
+
+    if (!user.email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authenticated user email is missing',
+      })
+    }
+
     // Validate request body
     const body = req.body as ApplicationData
     console.info('[API /api/v1/applications] Validating body', {
       bodyKeys: Object.keys((body || {}) as Record<string, unknown>),
       job_id: body?.job_id,
-      email: body?.email,
       hasCvFileUrl: Boolean(body?.cv_file_url),
       hasCvFileKey: Boolean(body?.cv_file_key),
     })
@@ -114,60 +138,32 @@ export default async function handler(
       })
     }
 
-    // 2. Check if applicant already exists by email
+    // 2. Check if applicant already exists by id
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
       .select('id')
-      .eq('email', validatedData.email)
+      .eq('id', user.id)
       .maybeSingle()
 
-    let profileId: string
+    const profileId = user.id
 
     if (existingProfile) {
-      // Use existing profile
-      profileId = existingProfile.id
-
-      // Check if already applied to this job
-      const { data: existingApplication } = await supabaseAdmin
-        .from('applications')
-        .select('id')
-        .eq('job_id', validatedData.job_id)
-        .eq('applicant_id', profileId)
-        .maybeSingle()
-
-      if (existingApplication) {
-        console.warn('[API /api/v1/applications] Duplicate application blocked', {
-          job_id: validatedData.job_id,
-          applicant_id: profileId,
-        })
-        return res.status(409).json({
-          success: false,
-          error: 'You have already applied to this job',
-        })
-      }
-    } else {
-      // 3. Create new auth user
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: validatedData.email,
-        email_confirm: true,
-        user_metadata: {
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
           first_name: validatedData.first_name,
           last_name: validatedData.last_name,
-        },
-      })
-
-      if (authError || !authUser.user) {
-        console.error('[API /api/v1/applications] Failed to create auth user', authError)
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to create user account',
-          details: authError,
+          phone: validatedData.phone || null,
+          linkedin_url: validatedData.linkedin_url || null,
+          github_url: validatedData.github_url || null,
+          portfolio_url: validatedData.portfolio_url || null,
         })
+        .eq('id', profileId)
+
+      if (profileUpdateError) {
+        console.error('[API /api/v1/applications] Failed to update profile', profileUpdateError)
       }
-
-      profileId = authUser.user.id
-
-      // 4. Create profile record
+    } else {
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert({
@@ -175,7 +171,7 @@ export default async function handler(
           role: 'applicant',
           first_name: validatedData.first_name,
           last_name: validatedData.last_name,
-          email: validatedData.email,
+          email: user.email,
           phone: validatedData.phone || null,
           linkedin_url: validatedData.linkedin_url || null,
           github_url: validatedData.github_url || null,
@@ -190,6 +186,25 @@ export default async function handler(
           details: profileError,
         })
       }
+    }
+
+    // Check if already applied to this job
+    const { data: existingApplication } = await supabaseAdmin
+      .from('applications')
+      .select('id')
+      .eq('job_id', validatedData.job_id)
+      .eq('applicant_id', profileId)
+      .maybeSingle()
+
+    if (existingApplication) {
+      console.warn('[API /api/v1/applications] Duplicate application blocked', {
+        job_id: validatedData.job_id,
+        applicant_id: profileId,
+      })
+      return res.status(409).json({
+        success: false,
+        error: 'You have already applied to this job',
+      })
     }
 
     // 5. Create application

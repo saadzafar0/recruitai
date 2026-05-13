@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Link2, Loader2, Mail, Phone, Upload, User } from 'lucide-react'
+import { FileText, Link2, Loader2, Phone, Upload, User } from 'lucide-react'
 import { ThemeToggleMobile } from '@/components/ui/theme-toggle'
 import { AuthError } from '@/components/auth'
 import { useToast } from '@/context/ToastContext'
+import { useAuth } from '@/context/AuthContext'
 import { submitApplication } from '@/lib/applications'
 import { uploadCV } from '@/lib/uploads'
 
@@ -13,7 +14,6 @@ interface CandidateApplyFormProps {
 
 interface ApplyFormState {
   jobId: string
-  email: string
   firstName: string
   lastName: string
   phone: string
@@ -25,7 +25,6 @@ interface ApplyFormState {
 
 const initialFormState: ApplyFormState = {
   jobId: '',
-  email: '',
   firstName: '',
   lastName: '',
   phone: '',
@@ -59,6 +58,7 @@ function normalizeUuidInput(value: string): string {
 export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProps) {
   const router = useRouter()
   const { showSuccess, showError } = useToast()
+  const { user, session } = useAuth()
 
   const [form, setForm] = useState<ApplyFormState>({
     ...initialFormState,
@@ -138,7 +138,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
     const jobId = normalizeUuidInput(form.jobId)
     const firstName = form.firstName.trim()
     const lastName = form.lastName.trim()
-    const email = form.email.trim()
 
     if (!jobId) {
       return 'Job UUID is required.'
@@ -154,14 +153,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
 
     if (!lastName) {
       return 'Last name is required.'
-    }
-
-    if (!email) {
-      return 'Email is required.'
-    }
-
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      return 'Email must be a valid email address.'
     }
 
     if (!isValidUrlOrEmpty(form.linkedinUrl)) {
@@ -183,11 +174,17 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
     event.preventDefault()
     setError('')
 
+    if (!session?.access_token || !user) {
+      const authMessage = 'Please sign in before submitting an application.'
+      setError(authMessage)
+      showError(authMessage)
+      return
+    }
+
     console.info('[ApplyForm] Submit clicked', {
       jobIdPreview: form.jobId.trim().slice(0, 8),
       hasFirstName: Boolean(form.firstName.trim()),
       hasLastName: Boolean(form.lastName.trim()),
-      hasEmail: Boolean(form.email.trim()),
       hasCV: Boolean(cvFile),
     })
 
@@ -200,7 +197,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
           normalizedJobId: normalizeUuidInput(form.jobId),
           firstName: form.firstName,
           lastName: form.lastName,
-          email: form.email,
         },
       })
       setError(validationError)
@@ -233,7 +229,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
 
       console.info('[ApplyForm] Submitting application payload', {
         job_id: normalizeUuidInput(form.jobId),
-        email: form.email.trim(),
         hasCoverLetter: Boolean(form.coverLetter.trim()),
         hasCvFileUrl: Boolean(cvFileUrl),
         hasCvFileKey: Boolean(cvFileKey),
@@ -241,7 +236,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
 
       const result = await submitApplication({
         job_id: normalizeUuidInput(form.jobId),
-        email: form.email.trim(),
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
         phone: form.phone.trim() || undefined,
@@ -252,6 +246,7 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
         cv_file_url: cvFileUrl,
         cv_file_name: cvFileName,
         cv_file_key: cvFileKey,
+        access_token: session.access_token,
       })
 
       if (!result.success || !result.data) {
@@ -328,7 +323,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
                   setForm({
                     ...initialFormState,
                     jobId: initialJobId,
-                    email: form.email,
                     firstName: form.firstName,
                     lastName: form.lastName,
                   })
@@ -419,22 +413,6 @@ export function CandidateApplyForm({ initialJobId = '' }: CandidateApplyFormProp
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Email *
-                </label>
-                <div className="relative">
-                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => updateField('email', e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded border outline-none bg-theme-input text-text-primary border-theme-border-input focus:border-accent-purple focus:bg-theme-card placeholder:text-text-secondary/50 transition-colors"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
                   Phone

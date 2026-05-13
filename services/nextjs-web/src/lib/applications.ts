@@ -1,6 +1,5 @@
 export interface ApplicationRequest {
   job_id: string
-  email: string
   first_name: string
   last_name: string
   phone?: string
@@ -11,6 +10,7 @@ export interface ApplicationRequest {
   cv_file_url?: string
   cv_file_name?: string
   cv_file_key?: string
+  access_token: string
 }
 
 export interface ApplicationResponse {
@@ -27,7 +27,6 @@ export interface ApplicationResponse {
 export async function submitApplication(payload: ApplicationRequest): Promise<ApplicationResponse> {
   console.info('[applications.submitApplication] Sending request', {
     job_id: payload.job_id,
-    email: payload.email,
     hasCvFileUrl: Boolean(payload.cv_file_url),
     hasCvFileKey: Boolean(payload.cv_file_key),
   })
@@ -36,6 +35,7 @@ export async function submitApplication(payload: ApplicationRequest): Promise<Ap
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${payload.access_token}`,
     },
     body: JSON.stringify(payload),
   })
