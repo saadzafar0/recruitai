@@ -14,9 +14,6 @@ interface PublicJobPosting {
   responsibilities: string | null
   requirements: string | null
   benefits: string | null
-  salary_min: number | null
-  salary_max: number | null
-  salary_currency: string | null
   status: string | null
 }
 
@@ -37,7 +34,7 @@ export default async function handler(
 
   const { data: jobs, error } = await supabaseAdmin
     .from('job_postings')
-    .select('id, title, location, employment_type, work_mode, application_deadline, created_at, description, responsibilities, requirements, benefits, salary_min, salary_max, salary_currency, status, organizations(name)')
+    .select('id, title, location, employment_type, work_mode, application_deadline, created_at, description, responsibilities, requirements, benefits,status, organizations(name)')
     .eq('status', 'published')
     .order('created_at', { ascending: false })
 
@@ -52,15 +49,12 @@ export default async function handler(
     employment_type: job.employment_type ?? null,
     work_mode: job.work_mode ?? null,
     application_deadline: job.application_deadline ?? null,
-    created_at: job.created_at ?? null,
+    created_at: job.created_at,
     organization_name: job.organizations?.name ?? null,
     description: job.description ?? null,
     responsibilities: job.responsibilities ?? null,
     requirements: job.requirements ?? null,
     benefits: job.benefits ?? null,
-    salary_min: job.salary_min ?? null,
-    salary_max: job.salary_max ?? null,
-    salary_currency: job.salary_currency ?? null,
     status: job.status ?? null,
   }))
 

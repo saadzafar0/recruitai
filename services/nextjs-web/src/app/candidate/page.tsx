@@ -88,31 +88,31 @@ export default function UserPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-[1.5rem] font-semibold mb-1 text-text-primary">
-              Welcome back, {user.firstName}!
-            </h1>
-            <p className="text-sm text-text-secondary">
-              Track your applications and assessments.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push('/candidate/jobs')}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-accent-purple text-white hover:bg-accent-purple-hover transition-colors cursor-pointer shadow-md"
-          >
-            <Search size={16} />
-            Search jobs
-          </button>
+        <div className="mb-8">
+          <h1 className="text-[1.5rem] font-semibold mb-1 text-text-primary">
+            Welcome back, {user.firstName}!
+          </h1>
+          <p className="text-sm text-text-secondary">
+            Track your applications and assessments.
+          </p>
         </div>
 
         <div className="rounded-lg p-5 border mb-8 bg-theme-card border-theme-border shadow-theme-card transition-colors">
-          <div>
-            <h2 className="text-[0.9375rem] font-semibold text-text-primary">Your Progress</h2>
-            <p className="text-sm text-text-secondary mt-1">
-              {summaryLoading ? 'Fetching your latest stats...' : 'Keep your momentum going.'}
-            </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-[0.9375rem] font-semibold text-text-primary">Your Progress</h2>
+              <p className="text-sm text-text-secondary mt-1">
+                {summaryLoading ? 'Fetching your latest stats...' : 'Keep your momentum going.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push('/candidate/jobs')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded text-sm font-medium bg-accent-purple text-white hover:bg-accent-purple-hover transition-colors cursor-pointer"
+            >
+              <Search size={16} />
+              Search jobs
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
@@ -157,7 +157,8 @@ export default function UserPage() {
 
                   <button
                     onClick={handleProceed}
-                    className="sm:min-w-[200px] px-8 py-3.5 rounded-lg text-sm font-bold bg-accent-purple text-white hover:bg-accent-purple-hover transition-all shadow-lg shadow-accent-purple/20 flex items-center justify-center gap-2 group/btn cursor-pointer"
+                    disabled={!selectedAppId}
+                    className="sm:min-w-[200px] px-8 py-3.5 rounded-lg text-sm font-bold bg-accent-purple text-white hover:bg-accent-purple-hover disabled:bg-disabled disabled:cursor-not-allowed transition-all shadow-lg shadow-accent-purple/20 flex items-center justify-center gap-2 group/btn"
                   >
                     Start Assessments
                     <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
