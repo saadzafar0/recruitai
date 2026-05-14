@@ -148,7 +148,7 @@ export default function AssessmentLobbyPage() {
       }
 
       showSuccess('Assessments concluded successfully.')
-      router.push('/candidate/confirmation')
+      router.push('/candidate')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to conclude assessments'
       showError(message)

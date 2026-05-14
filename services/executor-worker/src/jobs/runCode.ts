@@ -375,6 +375,11 @@ async function processCodeSubmission(
 
 		if (insErr || !created) {
 			throw new Error(`Failed to create placeholder coding_problem: ${insErr?.message || 'unknown'}`)
+		}
+		return (created as { id: string }).id
+	}
+
+	if (!problemId) {
 		console.warn('[executor-worker] No problem ID resolved, creating placeholder')
 		problemId = await createPlaceholderProblem()
 		console.info(`[executor-worker] Created placeholder problem ${problemId} for application ${applicationId}`)
@@ -387,14 +392,7 @@ async function processCodeSubmission(
 		problem_id: problemId,
 		language: language,
 		code_length: sourceCode.length,
-	});
-	return created.id
-	}
-
-	if (!problemId) {
-		problemId = await createPlaceholderProblem()
-		console.info(`[executor-worker] Created placeholder problem ${problemId} for application ${applicationId}`)
-	}
+	})
 
 	const submission = await findOrCreateSubmission(
 		assessment.id,
