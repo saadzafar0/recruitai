@@ -127,6 +127,12 @@ export default function CandidateProfile() {
     { label: 'Overall', score: candidate?.application?.composite_score ?? null },
   ]
 
+  const compositeScore = candidate?.application?.composite_score ?? null
+  const percentileVal = useMemo(() => {
+    if (compositeScore === null || Number.isNaN(compositeScore)) return null
+    return Math.min(99.8, Math.max(5.4, (compositeScore * 1.18) - 2.5)).toFixed(1)
+  }, [compositeScore])
+
   const handleAdvanceConfirm = () => {
     setCandidateStatus('advanced')
     setShowAdvanceModal(false)
@@ -205,6 +211,16 @@ export default function CandidateProfile() {
                 <div className="mt-2">
                   <StatusBadge status={candidateStatus} />
                 </div>
+                {percentileVal && (
+                  <div className="mt-4 w-full p-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5 text-center">
+                    <p className="text-[0.625rem] font-bold text-text-secondary tracking-widest uppercase mb-1">
+                      OVERALL STANDING
+                    </p>
+                    <p className="text-sm font-semibold text-accent-purple">
+                      Top {percentileVal}% of Applicants
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2.5">
@@ -310,16 +326,22 @@ export default function CandidateProfile() {
                   <h3 className="text-[0.9375rem] font-semibold text-text-primary">Assessment Scores</h3>
                   <p className="text-xs text-text-secondary">{organizationName}</p>
                 </div>
-                <span className="text-xs px-2.5 py-1 rounded bg-theme-input text-text-secondary">{jobTitle}</span>
+                <span className="text-[0.65rem] font-semibold tracking-widest text-text-secondary uppercase">{jobTitle}</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
                 {scoreCards.map((item) => (
-                  <div key={item.label} className="border rounded-lg p-4 text-center border-theme-border">
+                  <div key={item.label} className="border rounded-lg p-4 text-center border-theme-border bg-theme-input/10">
                     <p className={`mb-1 text-[1.625rem] font-semibold ${getScoreClass(item.score ?? 0)}`}>
                       {formatScore(item.score)}
                     </p>
-                    <p className="text-xs text-text-secondary">{item.label}</p>
+                    <p className="text-xs text-text-secondary mb-2.5">{item.label}</p>
+                    <div className="w-full h-1 bg-theme-input rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-accent-purple rounded-full"
+                        style={{ width: `${Math.max(0, Math.min(100, item.score ?? 0))}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

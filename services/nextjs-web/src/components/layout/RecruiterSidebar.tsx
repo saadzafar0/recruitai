@@ -31,6 +31,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/recruiter', active: true },
+  { label: 'Talent Pipeline', icon: LayoutDashboard, href: '/recruiter/mock', active: true },
   { label: 'Organization', icon: Building2, href: '/recruiter/organization', active: true },
   { label: 'Job Postings', icon: Briefcase, href: '/recruiter/jobs', active: true },
   { label: 'Candidates', icon: Users, href: '/recruiter/candidate', active: true },

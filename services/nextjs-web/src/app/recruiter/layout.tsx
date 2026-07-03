@@ -5,6 +5,7 @@ import { RecruiterLayout } from '@/components/layout'
 
 function getRecruiterTitle(pathname: string): string {
   if (pathname === '/recruiter') return 'Dashboard'
+  if (pathname.startsWith('/recruiter/mock')) return 'Talent Pipeline'
   if (pathname.startsWith('/recruiter/candidate')) return 'Candidates'
   if (pathname.startsWith('/recruiter/interview')) return 'Interviews'
   if (pathname.startsWith('/recruiter/coding-round')) return 'Coding Round'

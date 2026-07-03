@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecruitAI — Objective Automated Candidate Evaluation</title>
+  <meta name="description" content="Screen, interview, and evaluate technical talent at scale using conversational voice AI, compiler-grade sandboxed code execution, and system design intelligence.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Glow Blob -->
+  <div class="diffused-glow" id="glow-1"></div>
+
+  <!-- Header Navigation -->
+  <header class="navbar-wrapper">
+    <div class="navbar-container">
+      <div class="navbar-logo">
+        <span class="logo-text">RECRUIT<span class="logo-serif">AI</span></span>
+      </div>
+      <nav class="navbar-links">
+        <a href="#methodology" class="nav-link">Methodology</a>
+        <a href="#calibrator" class="nav-link">Simulation</a>
+        <a href="#inquiry" class="nav-link">Inquire</a>
+      </nav>
+      <div class="navbar-actions">
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+          <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+          </svg>
+          <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+          </svg>
+        </button>
+        <a href="#inquiry" class="cta-button-nav">Request a Demo</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-scroller">
+
+    <!-- Hero Section -->
+    <section class="section-hero">
+      <div class="hero-content">
+        <div class="label-container">
+          <span class="label-clean">TECHNICAL SCREENING PLATFORM</span>
+        </div>
+        <h1 class="hero-title">
+          Hire the Right Tech Talent, <span class="serif-italic">Faster</span>.
+        </h1>
+        <p class="hero-description">
+          Our objective AI uses conversational simulations and sandboxed coding challenges to accurately evaluate candidate skills, saving hours of developer interview time while removing bias.
+        </p>
+        <div class="hero-ctas">
+          <a href="#inquiry" class="button-primary">Request a Demo</a>
+          <a href="#methodology" class="button-secondary">Explore Platform</a>
+        </div>
+      </div>
+      
+      <div class="hero-visual">
+        <div class="visual-editorial-pane">
+          <div class="pane-header">
+            <span class="pane-header-title">EVALUATION SUMMARY</span>
+            <span class="pane-header-status">COMPLETED</span>
+          </div>
+          <div class="pane-body">
+            <div class="record-meta">
+              <span class="meta-label">CANDIDATE:</span>
+              <span class="meta-value">Adrian Sterling</span>
+            </div>
+            <div class="record-meta">
+              <span class="meta-label">ROLE:</span>
+              <span class="meta-value">Senior Systems Engineer</span>
+            </div>
+            
+            <div class="divider-line"></div>
+            
+            <div class="percentile-box">
+              <span class="percentile-lbl">OVERALL STANDING</span>
+              <span class="percentile-val">Top 5.8% of Applicants</span>
+            </div>
+
+            <div class="divider-line"></div>
+            
+            <div class="skills-summary-wrapper">
+              <span class="skills-summary-header">SKILLS ASSESSMENT (SCORES 0-100)</span>
+              
+              <div class="skill-meter-group">
+                <div class="skill-meter-info">
+                  <span class="skill-name">Resume Fit</span>
+                  <span class="skill-score">85</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" style="width: 85%;"></div>
+                </div>
+              </div>
+
+              <div class="skill-meter-group">
+                <div class="skill-meter-info">
+                  <span class="skill-name">Voice Simulation</span>
+                  <span class="skill-score">78</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" style="width: 78%;"></div>
+                </div>
+              </div>
+
+              <div class="skill-meter-group">
+                <div class="skill-meter-info">
+                  <span class="skill-name">Coding Sandbox</span>
+                  <span class="skill-score">92</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" style="width: 92%;"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="divider-line"></div>
+            
+            <div class="record-summary">
+              <span class="summary-label">OVERALL RECOMMENDATION:</span>
+              <span class="summary-value text-teal">Strong Pass (Review Recommended)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Methodology Section -->
+    <section class="section-methodology" id="methodology">
+      <div class="section-header">
+        <span class="section-mono-tag">PIPELINE METHODOLOGY</span>
+        <h2 class="section-title">The Three Assessment Columns</h2>
+        <p class="section-subtitle">Evaluating candidates systematically through real-world coding challenges and vocal simulations.</p>
+      </div>
+
+      <div class="methodology-grid">
+        <!-- Column 1 -->
+        <div class="methodology-column">
+          <div class="column-num">01</div>
+          <h3 class="column-title">Conversational Interviewing</h3>
+          <p class="column-description">
+            Conduct human-like voice assessments to evaluate communication, problem solving, and role fit using Vapi conversational logic.
+          </p>
+          <div class="minimal-visual-voice">
+            <div class="wave-line"></div>
+            <div class="wave-line wave-alt"></div>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="methodology-column">
+          <div class="column-num">02</div>
+          <h3 class="column-title">Sandboxed Coding Challenges</h3>
+          <p class="column-description">
+            Execute code submissions against automated test suites in a secure sandbox to verify correctness and complexity using Judge0.
+          </p>
+          <div class="minimal-visual-code">
+            <span class="code-lbl">// RUNNING AUTOMATED UNIT TESTS</span>
+            <span class="code-res">PASS (14/14 cases) [O(N log N)]</span>
+          </div>
+        </div>
+
+        <!-- Column 3 -->
+        <div class="methodology-column">
+          <div class="column-num">03</div>
+          <h3 class="column-title">Objective System Design</h3>
+          <p class="column-description">
+            Evaluate architectural logic and trade-offs dynamically, scoring results against standard industry rubrics to measure scalability.
+          </p>
+          <div class="minimal-visual-design">
+            <div class="design-box">Client</div>
+            <span class="arrow">→</span>
+            <div class="design-box">Balancer</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Talent Calibrator Section (Simulation) -->
+    <section class="section-calibrator" id="calibrator">
+      <div class="calibrator-container">
+        <div class="calibrator-settings">
+          <span class="section-mono-tag">CONFIGURATION DECK</span>
+          <h2 class="section-title text-left">Pipeline Calibrator</h2>
+          <p class="section-subtitle text-left">Calibrate evaluation weights to adjust how candidate composite score metrics and hiring recommendations are calculated.</p>
+          
+          <div class="sliders-wrapper">
+            <!-- Slider 1 -->
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">CV Relevance Weight</span>
+                <span class="slider-value" id="val-cv">25%</span>
+              </div>
+              <input type="range" id="slide-cv" min="0" max="100" value="25" class="range-slider">
+            </div>
+
+            <!-- Slider 2 -->
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">Voice Resonance (Vapi)</span>
+                <span class="slider-value" id="val-voice">35%</span>
+              </div>
+              <input type="range" id="slide-voice" min="0" max="100" value="35" class="range-slider">
+            </div>
+
+            <!-- Slider 3 -->
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">Coding Sandbox (Judge0)</span>
+                <span class="slider-value" id="val-code">30%</span>
+              </div>
+              <input type="range" id="slide-code" min="0" max="100" value="30" class="range-slider">
+            </div>
+
+            <!-- Slider 4 -->
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">System Design Evaluation</span>
+                <span class="slider-value" id="val-design">10%</span>
+              </div>
+              <input type="range" id="slide-design" min="0" max="100" value="10" class="range-slider">
+            </div>
+            
+            <div class="weight-status-box" id="weight-error-box" style="display: none;">
+              <span class="error-msg">Pipeline Error: Weights must sum to 100%. Current sum: <span id="weight-current-sum">100</span>%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calibrator-preview">
+          <div class="preview-editorial-card">
+            <h3 class="preview-title">Simulation Output</h3>
+            
+            <div class="preview-score-display">
+              <span class="score-large" id="calc-score">82</span>
+              <span class="score-label">Composite Score</span>
+            </div>
+
+            <div class="preview-metrics">
+              <div class="metric-row">
+                <span class="metric-lbl">Recommendation:</span>
+                <span class="metric-val" id="calc-tier">Strong Yes</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-lbl">Target Percentile:</span>
+                <span class="metric-val" id="calc-percentile">94.2%</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-lbl">Analysis Integrity:</span>
+                <span class="metric-val text-teal" id="calc-confidence">Optimal</span>
+              </div>
+            </div>
+
+            <button class="btn-gauge-lock" id="btn-lock-pipeline">Lock Evaluation weights</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Secure Intake Portal (Form) -->
+    <section class="section-inquiry" id="inquiry">
+      <div class="inquiry-editorial-card">
+        <div class="inquiry-header">
+          <span class="section-mono-tag">INTAKE PORTAL</span>
+          <h2 class="section-title">Request a Product Demo</h2>
+          <p class="section-subtitle">Accelerate your technical hiring pipeline. Submit the form below to connect with our deployment team.</p>
+        </div>
+
+        <form class="inquiry-form" id="contact-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="name" class="form-label">Full Name</label>
+              <input type="text" id="name" required placeholder="e.g. Adrian Sterling" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="email" class="form-label">Business Email</label>
+              <input type="email" id="email" required placeholder="adrian@organization.com" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="company" class="form-label">Company Name</label>
+            <input type="text" id="company" required placeholder="e.g. Zenith Tech" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label for="message" class="form-label">Recruitment Volume / Details</label>
+            <textarea id="message" required placeholder="Briefly describe your annual technical hiring volume and current bottlenecks..." class="form-input form-textarea"></textarea>
+          </div>
+
+          <button type="submit" class="form-submit-btn">
+            <span>Request a Demo</span>
+          </button>
+        </form>
+
+        <div class="form-success-message" id="success-box" style="display: none;">
+          <h3>Inquiry Logged ✓</h3>
+          <p>Your request has been registered. An integration engineer will contact your team's representative shortly.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer-wrapper">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="logo-text">RECRUIT<span class="logo-serif">AI</span></span>
+      </div>
+      <p class="footer-copy">© 2026 RecruitAI Technologies Inc. All rights secured. System configurations are fully compliant with ISO 27001.</p>
+      <div class="footer-status">
+        <span class="status-pulse"></span>
+        <span class="status-lbl">Secure Node Live</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script -->
+  <script src="script.js"></script>
+</body>
+</html>

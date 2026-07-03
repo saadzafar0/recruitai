@@ -102,6 +102,9 @@ export default function HomepageTailwind() {
             <ThemeToggleMobile className="sm:hidden" />
             {/* Theme toggle - desktop version (hidden on small screens) */}
             <ThemeToggle className="hidden sm:flex" />
+            <Button variant="subtle" onClick={() => router.push('/landing')} className="hidden sm:inline-flex">
+              Landing Redesign
+            </Button>
             <Button variant="outline" onClick={() => router.push('/login')}>
               Log In
             </Button>

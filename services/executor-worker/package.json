@@ -15,6 +15,7 @@
 		"bullmq": "^5.76.2",
 		"dotenv": "^16.6.1",
 		"ioredis": "^5.10.1",
+		"ws": "^8.21.0",
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {

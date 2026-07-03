@@ -8,33 +8,33 @@
   color-scheme: dark;
 
   /* Backgrounds */
-  --color-bg: #0f1117;
-  --color-bg-card: #171921;
-  --color-bg-input: #13151d;
-  --color-bg-elevated: #1a1d27;
+  --color-bg: #090a0e;
+  --color-bg-card: #12141a;
+  --color-bg-input: #0b0c10;
+  --color-bg-elevated: #161822;
 
   /* Text */
-  --color-text-primary: #e2e4eb;
-  --color-text-secondary: #7e8494;
+  --color-text-primary: #eae8e3;
+  --color-text-secondary: #94918a;
 
   /* Accents */
-  --color-accent-purple: #7c6aef;
-  --color-accent-purple-hover: #9585f5;
-  --color-accent-green: #3ecf8e;
-  --color-accent-red: #ef6b6b;
+  --color-accent-purple: #0d9488;
+  --color-accent-purple-hover: #0f766e;
+  --color-accent-green: #10b981;
+  --color-accent-red: #d66868;
 
   /* Borders */
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
   --color-border-input: rgba(255, 255, 255, 0.08);
-  --color-border-hover: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
 
   /* Shadows */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --shadow-elevated: 0 10px 45px rgba(0, 0, 0, 0.35);
 
   /* Scrollbar */
-  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.18);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.08);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.15);
 }
 
 /* Light theme */
@@ -42,33 +42,33 @@
   color-scheme: light;
 
   /* Backgrounds */
-  --color-bg: #f8f9fb;
+  --color-bg: #fbfbf8;
   --color-bg-card: #ffffff;
-  --color-bg-input: #f3f4f6;
+  --color-bg-input: #f3f2ee;
   --color-bg-elevated: #ffffff;
 
   /* Text */
-  --color-text-primary: #1a1d27;
-  --color-text-secondary: #6b7280;
+  --color-text-primary: #1c1c1f;
+  --color-text-secondary: #6e6b66;
 
-  /* Accents - slightly adjusted for light mode visibility */
-  --color-accent-purple: #7c6aef;
-  --color-accent-purple-hover: #6b5ad4;
-  --color-accent-green: #16a34a;
-  --color-accent-red: #dc2626;
+  /* Accents */
+  --color-accent-purple: #0d9488;
+  --color-accent-purple-hover: #0f766e;
+  --color-accent-green: #0d9488;
+  --color-accent-red: #d66868;
 
   /* Borders */
-  --color-border-subtle: rgba(0, 0, 0, 0.06);
-  --color-border-input: rgba(0, 0, 0, 0.1);
-  --color-border-hover: rgba(0, 0, 0, 0.15);
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-input: rgba(0, 0, 0, 0.12);
+  --color-border-hover: rgba(0, 0, 0, 0.18);
 
   /* Shadows */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 10px 45px rgba(0, 0, 0, 0.08);
 
   /* Scrollbar */
-  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
 }
 
 html,

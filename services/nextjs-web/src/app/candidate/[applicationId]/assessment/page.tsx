@@ -145,7 +145,7 @@ export default function AssessmentLobbyPage() {
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data?.error || 'Failed to conclude assessments')
-      }
+      }1
 
       showSuccess('Assessments concluded successfully.')
       router.push('/candidate')
