@@ -21,7 +21,7 @@ export function useRecruiterCandidates(): UseRecruiterCandidatesReturn {
       return
     }
 
-    if (!user || (user.role !== 'recruiter' && user.role !== 'admin')) {
+    if (!user || user.role !== 'recruiter') {
       setCandidates([])
       setLoading(false)
       setError(null)

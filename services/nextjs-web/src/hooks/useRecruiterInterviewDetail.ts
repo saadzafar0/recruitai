@@ -21,7 +21,7 @@ export function useRecruiterInterviewDetail(candidateId: string): UseRecruiterIn
       return
     }
 
-    if (!user || (user.role !== 'recruiter' && user.role !== 'admin')) {
+    if (!user || (user.role !== 'recruiter')) {
       setDetail(null)
       setLoading(false)
       setError(null)

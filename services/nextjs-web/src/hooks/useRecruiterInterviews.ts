@@ -21,7 +21,7 @@ export function useRecruiterInterviews(): UseRecruiterInterviewsReturn {
       return
     }
 
-    if (!user || (user.role !== 'recruiter' && user.role !== 'admin')) {
+    if (!user || (user.role !== 'recruiter' )) {
       setInterviews([])
       setLoading(false)
       setError(null)

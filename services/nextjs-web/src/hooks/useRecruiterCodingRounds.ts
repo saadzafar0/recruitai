@@ -21,7 +21,7 @@ export function useRecruiterCodingRounds(): UseRecruiterCodingRoundsReturn {
       return
     }
 
-    if (!user || (user.role !== 'recruiter' && user.role !== 'admin')) {
+    if (!user || (user.role !== 'recruiter' )) {
       setRounds([])
       setLoading(false)
       setError(null)
