@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node ./scripts/prepare-standalone.cjs",
     "start": "next start",
+    "start:standalone": "node .next/standalone/server.js",
     "lint": "next lint",
     "db:push": "node ./scripts/db-push.cjs",
     "test:e2e": "tsx src/scripts/e2e-test.ts"

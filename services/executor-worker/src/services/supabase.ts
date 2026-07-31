@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import ws from 'ws'
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 
@@ -16,5 +17,8 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
 	auth: {
 		autoRefreshToken: false,
 		persistSession: false,
+	},
+	realtime: {
+		transport: ws,
 	},
 })

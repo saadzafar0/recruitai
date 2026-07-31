@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
+import { embedOne } from '@/lib/utils'
 
 type TranscriptQuality = 'high' | 'medium' | 'low' | 'neutral'
 
@@ -133,7 +134,11 @@ export default async function handler(
     return res.status(500).json({ error: 'Failed to load interview session' })
   }
 
-  if (!session || !session.applications || !session.applications.applicant) {
+  const application = embedOne(session?.applications)
+  const applicant = application ? embedOne(application.applicant) : null
+  const job = application ? embedOne(application.job) : null
+
+  if (!session || !application || !applicant) {
     return res.status(404).json({ error: 'Interview session not found' })
   }
 
@@ -181,14 +186,14 @@ export default async function handler(
     score: toScore(line.score_confidence ?? null),
   }))
 
-  const candidateName = `${session.applications.applicant.first_name} ${session.applications.applicant.last_name}`.trim()
+  const candidateName = `${applicant.first_name} ${applicant.last_name}`.trim()
 
   return res.status(200).json({
-    candidate_id: session.applications.applicant.id,
+    candidate_id: applicant.id,
     candidate_name: candidateName,
-    job_title: session.applications.job?.title || 'Role not available',
+    job_title: job?.title || 'Role not available',
     completed_at: session.completed_at || null,
-    voice_score: session.applications.voice_score ?? null,
+    voice_score: application.voice_score ?? null,
     transcript,
     clarity,
     relevance,

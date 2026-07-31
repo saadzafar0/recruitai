@@ -40,7 +40,12 @@ export default async function handler(
   }
 
   if (!assessment?.id) {
-    return res.status(404).json({ success: false, error: 'No assessment found for this application' })
+    // 200 (not 404): executor creates the assessment asynchronously after BullMQ dequeue.
+    // Polling should treat this as "still processing" without browser 404 noise.
+    return res.status(200).json({
+      success: true,
+      data: { verdict: 'pending', output: '' },
+    })
   }
 
   const { data: submission, error: submissionError } = await supabaseAdmin
@@ -56,7 +61,10 @@ export default async function handler(
   }
 
   if (!submission) {
-    return res.status(404).json({ success: false, error: 'No submissions found yet' })
+    return res.status(200).json({
+      success: true,
+      data: { verdict: 'pending', output: '' },
+    })
   }
 
   let output = submission.ai_feedback || ''

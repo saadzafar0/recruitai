@@ -61,7 +61,7 @@ function createRedisConnection(): IORedis {
 		lazyConnect: true,
 		...(useTls ? { tls: {} } : {}),
 	}
-
+ 
 	return new IORedis(options)
 }
 
